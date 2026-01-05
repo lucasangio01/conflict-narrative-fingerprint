@@ -12,3 +12,6 @@
 ## Israel
 - Algemeiner (246) - https://www.algemeiner.com/category/commentary/opinion/
 - Israel Hayom - https://www.israelhayom.com/opinions/
+
+## Palestine
+- AlJazeera (361) - https://www.aljazeera.com/opinion/

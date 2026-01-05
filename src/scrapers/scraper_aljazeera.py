@@ -2,18 +2,25 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
 import pandas as pd
-import re
+from urllib.parse import urljoin
 
 
-class IsraelHayom:
+class Algemeiner:
     def __init__(self):
-        self.base_url = "https://www.israelhayom.com/opinions/"
+        self.base_url = "https://www.aljazeera.com"
         self.semaphore = asyncio.Semaphore(3)
-
+        self.headers = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9"}
+        
 
     async def fetch(self, session, url):
         async with self.semaphore:
-            async with session.get(url) as response:
+            async with session.get(url, headers = self.headers) as response:
                 response.raise_for_status()
                 return await response.text()
 
@@ -21,18 +28,15 @@ class IsraelHayom:
     async def extract_data(self, session):
         all_titles = []
         all_urls = []
-        for i in range(1, 15):
-            url = f"https://www.israelhayom.com/opinions/page/{i}"
+        for i in range(1, 20):
+            url = "https://www.aljazeera.com/opinion/"
             html = await self.fetch(session, url)
             soup = await asyncio.to_thread(BeautifulSoup, html, "html.parser")
-            h3 = [u for u in soup.find_all("h3", attrs = {"class": "jeg_post_title"})]
-            titles = [t.find("a").text.strip() for t in h3 if t is not None]
-            urls = [t.find("a")["href"] for t in h3 if t is not None]
+            titles = [u.find("span").text for u in soup.find_all("a", attrs = {"class": "u-clickable-card__link article-card__link"})]
+            urls = [urljoin(self.base_url, u["href"]) for u in soup.find_all("a", href = True, attrs = {"class": "u-clickable-card__link article-card__link"})]
             all_titles.extend(titles)
             all_urls.extend(urls)
-            print(all_titles)
         self.df_titles = pd.DataFrame({"url": all_urls, "title": all_titles})
-        self.df_titles.to_csv("../../data/israel/hayom.csv")
 
 
     async def extract_text(self, session):
@@ -45,12 +49,12 @@ class IsraelHayom:
         all_dates = []
         for soup in soups:
             paragraphs = [p.text.strip() for p in soup.find_all("p")]
-            dates = [d for d in soup.find_all("span", attrs = {"class": "last_modified_paragraph"})]
+            dates = [d.text.strip() for d in soup.find_all("div", attrs = {"class": "date"})]
             all_texts.append(" ".join(paragraphs))
             all_dates.append(" ".join(dates))
 
         self.df_text = pd.DataFrame({"title": titles, "date": all_dates, "text": all_texts})
-        self.df_text.to_csv("../../data/israel/hayom.csv")
+        self.df_text.to_csv("../../data/palestine/aljazeera.csv")
     
     async def process_website(self, session):
         await self.extract_data(session)
@@ -59,7 +63,7 @@ class IsraelHayom:
 
 
 async def main():
-    scraper = IsraelHayom()
+    scraper = Algemeiner()
     async with aiohttp.ClientSession() as session:
         await scraper.process_website(session)
 
