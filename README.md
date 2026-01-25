@@ -1,13 +1,18 @@
 # Articles list
 
-## Ukraine (150)
-- Kyiv Post (71) - https://www.kyivpost.com/opinions/all?topic=10
-- Kyiv Independent (79) - https://kyivindependent.com/ghost/api/content/posts/
+## APPROVATI
+- [UCRAINA] Ukrainska Pravda - https://www.pravda.com.ua/eng/columns/               132 (senza limite)
+- [UCRAINA] Liga.net - https://www.liga.net/en/opinion                              80 (senza limite)
+- [RUSSIA] RT - https://russian.rt.com/opinion                                      150 (senza limite)
+- [RUSSIA] Komsomolskaya Pravda - https://www.kp.ru/daily/allcolumn/                200 (senza limite)
+- [ISRAELE] Y Net global - https://www.ynetnews.com/opinions-analysis               60
+- [ISRAELE] Y Net - https://www.ynet.co.il/news/category/194                        97 (+ circa 4 al giorno)
+- [ISRAELE] Jerusalem Post - https://www.jpost.com/opinion                          30
+- [PALESTINA] Al-Quds - https://www.alquds.com/en/categories/opinions/              240 (senza limite)
 
-## Russia (118)
-- Komsomolskaya Pravda (23) - https://www.kp.ru/daily/euromaidan/
-- Veterans Today (66) - https://vtforeignpolicy.com/category/wars/ukraine-war/?filter_by=popular
-- South Front (29) - https://southfront.press/category/all-articles/products/military-report/ukraine-military-report/
+
+## Ukraine
+- NV - https://nv.ua/opinion.html
 
 ## Israel
 - Algemeiner (246) - https://www.algemeiner.com/category/commentary/opinion/
@@ -15,3 +20,6 @@
 
 ## Palestine
 - AlJazeera (361) - https://www.aljazeera.com/opinion/
+- Electronic Intifada - Error 429
+- Palestine Chronicle - Error 429
+- Qudsnen (505)

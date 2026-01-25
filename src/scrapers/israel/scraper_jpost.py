@@ -2,12 +2,14 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
 import pandas as pd
+from urllib.parse import urljoin
 
 
-class KyivPost:
+
+class JPost:
     def __init__(self):
-        self.base_url = "https://www.kyivpost.com"
-        self.semaphore = asyncio.Semaphore(10)
+        self.base_url = "https://www.jpost.com/opinion"
+        self.semaphore = asyncio.Semaphore(3)
 
 
     async def fetch(self, session, url):
@@ -20,30 +22,32 @@ class KyivPost:
     async def extract_data(self, session):
         all_titles = []
         all_urls = []
-        for i in range(6): # prendiamo solo le prime 6 pagine (12 articoli per pagina)
-            url = f"https://www.kyivpost.com/opinions/all?topic=10&page={i+1}"
+        for i in range(1, 4):
+            url = f"https://www.jpost.com/opinion?page={i}"
             html = await self.fetch(session, url)
             soup = await asyncio.to_thread(BeautifulSoup, html, "html.parser")
-            titles = [t.text.strip() for t in soup.find_all("a", attrs = {"class": "title"})]
-            urls = [a["href"] for a in soup.find_all("a", href = True, attrs = {"class": "title"})]
-            all_titles.extend(titles)
+            urls = [urljoin(self.base_url, t["href"]) for t in soup.find_all("a", attrs = {"class": "article-item-content-link"}) if t is not None]
             all_urls.extend(urls)
-        self.df_titles = pd.DataFrame({"url": all_urls, "title": all_titles})
-
+        self.df_titles = pd.DataFrame({"url": all_urls})
 
     async def extract_text(self, session):
-        titles = self.df_titles["title"]
         tasks = [self.fetch(session, row.url) for row in self.df_titles.itertuples()]
         html_pages = await asyncio.gather(*tasks)
         parse_tasks = [asyncio.to_thread(BeautifulSoup, html, "html.parser") for html in html_pages]
         soups = await asyncio.gather(*parse_tasks)
         all_texts = []
+        all_titles = []
+        all_dates = []
         for soup in soups:
+            title = [t.text.strip() for t in soup.find_all("h1", attrs = {"class": "article-main-title"})]
             paragraphs = [p.text.strip() for p in soup.find_all("p")]
+            dates = [d.text.strip() for d in soup.find_all("time", attrs = {"class": "datetime"})]
             all_texts.append(" ".join(paragraphs))
+            all_dates.append(" ".join(dates))
+            all_titles.append(" ".join(title))
 
-        self.df_text = pd.DataFrame({"title": titles, "text": all_texts})
-        self.df_text.to_csv("../data/ukraine/kyiv_post.csv")
+        self.df_text = pd.DataFrame({"title": all_titles, "date": all_dates, "text": all_texts})
+        self.df_text.to_csv("../../../data/israel/jpost.csv")
     
     async def process_website(self, session):
         await self.extract_data(session)
@@ -52,7 +56,7 @@ class KyivPost:
 
 
 async def main():
-    scraper = KyivPost()
+    scraper = JPost()
     async with aiohttp.ClientSession() as session:
         await scraper.process_website(session)
 
