@@ -41,11 +41,9 @@ class LigaNET:
             urls = [urljoin(self.base_url, t["href"]) for t in soup.find_all("a", attrs = {"class": "hover:text-primary transition-colors"}) if t is not None]
             all_urls.extend(urls)
         self.df_titles = pd.DataFrame({"url": all_urls})
-        self.df_titles.to_csv("../../../data/palestine/alquds.csv")
 
 
     async def extract_text(self, session):
-        self.df_titles = pd.read_csv("../../data/palestine/alquds.csv")
         tasks = [self.fetch(session, row.url) for row in self.df_titles.itertuples()]
         html_pages = await asyncio.gather(*tasks)
         parse_tasks = [asyncio.to_thread(BeautifulSoup, html, "html.parser") for html in html_pages]
@@ -64,12 +62,12 @@ class LigaNET:
             all_titles.append(" ".join(title))
 
         self.df_text = pd.DataFrame({"title": all_titles, "date": all_dates, "text": all_texts})
-        self.df_text.to_csv("../../data/palestine/alquds2.csv")
+        self.df_text.to_csv("../../data/palestine/1_original/alquds.csv")
     
 
     async def process_website(self, session):
         await self.extract_data(session)
-        # await self.extract_text(session)
+        await self.extract_text(session)
 
 
 

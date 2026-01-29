@@ -1,5 +1,11 @@
-# Articles list
+# DA FARE
+- Aggiungere data su KP 
 
+
+# DA FARE OGNI GIORNO
+scraping Jpost, Ynet
+
+# SITI
 ## APPROVATI
 - [UCRAINA] Ukrainska Pravda - https://www.pravda.com.ua/eng/columns/               132 (senza limite)
 - [UCRAINA] Liga.net - https://www.liga.net/en/opinion                              80 (senza limite)

@@ -59,7 +59,7 @@ class YnetGlobal:
             all_dates.append(" ".join(dates))
 
         self.df_text = pd.DataFrame({"title": all_titles, "date": all_dates, "text": all_texts})
-        self.df_text.to_csv("../../../data/israel/ynet.csv")
+        self.df_text.to_csv("../../../data/israel/1_original/ynet_global.csv")
     
     async def process_website(self, session):
         await self.extract_data(session)
