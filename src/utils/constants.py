@@ -8,5 +8,5 @@ class Months:
 
 
 class Translation:
-    HEBREW_TO_ENGLISH = pipeline(task = "translation", model = "Helsinki-NLP/opus-mt-tc-big-he-en")
-    RUSSIAN_TO_ENGLISH = pipeline(task = "translation", model = "Helsinki-NLP/opus-mt-ru-en")
+    HEBREW_TO_ENGLISH = pipeline(task = "translation_he_to_en", model = "Helsinki-NLP/opus-mt-tc-big-he-en")
+    RUSSIAN_TO_ENGLISH = pipeline(task = "translation_ru_to_en", model = "Helsinki-NLP/opus-mt-ru-en")
