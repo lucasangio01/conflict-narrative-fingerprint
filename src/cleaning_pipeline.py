@@ -57,14 +57,17 @@ class CleaningPipeline:
         pattern_en = r"\b(" + "|".join(Months.MONTHS_WORDS1.keys()) + r")\b"
         pattern_ru = r"\b(" + "|".join(Months.MONTHS_RUSSIAN.keys()) + r")\b"
 
-        self.df["date"] = (
-            self.df["date"]
-            .str.replace(pattern_ru, lambda m: Months.MONTHS_RUSSIAN[m.group(0)], regex=True)
-            .str.replace(pattern_en, lambda m: Months.MONTHS_WORDS1[m.group(0)], regex=True)
-            .str.replace(" ", "-", regex=False))
-
+        if self.website != "liganet":
+            self.df["date"] = (
+                self.df["date"]
+                .str.replace(r'(?<=\w) (?=\w)', '', regex=True)
+                .str.replace(pattern_en, lambda m: Months.MONTHS_WORDS1[m.group(0).title()], regex=True, flags=re.IGNORECASE)
+                .str.replace(pattern_ru, lambda m: Months.MONTHS_RUSSIAN[m.group(0).lower()], regex=True, flags=re.IGNORECASE)
+                .str.replace(r"[,/]", " ", regex=True)
+                .str.replace(r"\s+\d{1,2}\s*:\s*\d{2}.*$", "", regex=True)
+                .str.replace(r"\s+", " ", regex=True)
+                .str.strip())
         self.df["date"] = pd.to_datetime(self.df["date"], errors="coerce").dt.strftime("%d-%m-%Y")
-        self.df = self.df.drop(columns=["Unnamed: 0"], errors="ignore")
 
 
 

@@ -2,8 +2,7 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
 import pandas as pd
-from urllib.parse import urljoin
-
+import os
 
 
 class LigaNET:
@@ -23,15 +22,23 @@ class LigaNET:
             "Sec-Fetch-Dest": "document",
         }
 
-
+        # CSV path and existing titles
+        self.csv_path = "../../../data/ukraine/liganet_original.csv"
+        if os.path.exists(self.csv_path):
+            self.df_text = pd.read_csv(self.csv_path)
+            if "Unnamed: 0" in self.df_text.columns:
+                self.df_text = self.df_text.drop(columns=["Unnamed: 0"])
+            self.existing_titles = set(self.df_text["title"])
+        else:
+            self.df_text = pd.DataFrame(columns=["title", "date", "text"])
+            self.existing_titles = set()
 
     async def fetch(self, session, url):
         await asyncio.sleep(1)
         async with self.semaphore:
-            async with session.get(url, headers = self.headers) as response:
+            async with session.get(url, headers=self.headers) as response:
                 response.raise_for_status()
                 return await response.text()
-
 
     async def extract_data(self, session):
         all_urls = []
@@ -39,34 +46,49 @@ class LigaNET:
             url = f"https://www.liga.net/en/opinion/page/{i+1}"
             html = await self.fetch(session, url)
             soup = await asyncio.to_thread(BeautifulSoup, html, "html.parser")
-            urls = [t["href"] for t in soup.find_all("a", attrs = {"class": "idea-card__title is-bold is-accent"}) if t is not None]
+            urls = [
+                t["href"] for t in soup.find_all("a", attrs={"class": "idea-card__title is-bold is-accent"})
+                if t is not None
+            ]
             all_urls.extend(urls)
         self.df_titles = pd.DataFrame({"url": all_urls})
-
 
     async def extract_text(self, session):
         tasks = [self.fetch(session, row.url) for row in self.df_titles.itertuples()]
         html_pages = await asyncio.gather(*tasks)
         parse_tasks = [asyncio.to_thread(BeautifulSoup, html, "html.parser") for html in html_pages]
         soups = await asyncio.gather(*parse_tasks)
+
         all_texts = []
         all_titles = []
         all_dates = []
-        for soup in soups:
-            title = [t.text.strip() for t in soup.find_all("h1", attrs = {"class": "article-header__title is-accent"})]
-            paragraphs = [p.text.strip() for p in soup.find_all("p")]
-            dates = [d.text.strip() for d in soup.find_all("time", attrs = {"class": "article-header__date"})]
-            all_texts.append(" ".join(paragraphs))
-            all_dates.append(" ".join(dates))
-            all_titles.append(" ".join(title))
 
-        self.df_text = pd.DataFrame({"title": all_titles, "date": all_dates, "text": all_texts})
-        self.df_text.to_csv("../../../data/ukraine/liganet.csv")
-    
+        for soup in soups:
+            title_tags = soup.find_all("h1", attrs={"class": "article-header__title is-accent"})
+            if not title_tags:
+                continue
+            title = " ".join([t.text.strip() for t in title_tags])
+            if title in self.existing_titles:
+                continue
+
+            paragraphs = [p.text.strip() for p in soup.find_all("p")]
+            date_tags = soup.find_all("time", attrs={"class": "article-header__date"})
+            date = " ".join([d.text.strip() for d in date_tags]) if date_tags else "N/A"
+
+            all_titles.append(title)
+            all_texts.append(" ".join(paragraphs))
+            all_dates.append(date)
+            self.existing_titles.add(title)
+
+        if all_titles:
+            new_df = pd.DataFrame({"title": all_titles, "date": all_dates, "text": all_texts})
+            self.df_text = pd.concat([self.df_text, new_df], ignore_index=True)
+            self.df_text.drop_duplicates(subset="title", inplace=True)
+            self.df_text.to_csv(self.csv_path, index=False)
+
     async def process_website(self, session):
         await self.extract_data(session)
         await self.extract_text(session)
-
 
 
 async def main():
