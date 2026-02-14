@@ -10,6 +10,7 @@ dependencies = [
     "bs4>=0.0.2",
     "jupyter>=1.1.1",
     "lxml>=6.0.2",
+    "matplotlib>=3.10.8",
     "nltk>=3.9.2",
     "pandas>=2.3.3",
     "playwright>=1.57.0",
