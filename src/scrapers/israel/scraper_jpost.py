@@ -10,7 +10,7 @@ class JPost:
     def __init__(self):
         self.base_url = "https://www.jpost.com/opinion"
         self.semaphore = asyncio.Semaphore(3)
-        self.csv_path = "../../../data/israel/jpost_original.csv"
+        self.csv_path = "../../../data/pal_isr/jpost_original.csv"
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:
