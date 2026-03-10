@@ -30,7 +30,7 @@ class JPost:
 
     async def extract_data(self, session):
         all_urls = []
-        for i in range(1, 4):
+        for i in range(1, 11):
             url = f"https://www.jpost.com/opinion?page={i}"
             html = await self.fetch(session, url)
             soup = await asyncio.to_thread(BeautifulSoup, html, "html.parser")

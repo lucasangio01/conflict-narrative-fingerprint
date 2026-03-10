@@ -22,7 +22,7 @@ class Ynet:
             "Sec-Fetch-User": "?1",
             "Sec-Fetch-Dest": "document",}
         
-        self.csv_path = "../../../data/israel/1_original/ynet.csv"
+        self.csv_path = "../../../data/pal_isr/ynet_original.csv"
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:
