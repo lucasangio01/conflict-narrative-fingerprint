@@ -17,7 +17,7 @@ class UkPravda:
         self.title_class = "post_article_title"
         self.date_tag = "span"
         self.date_class = "post_author_date"
-        self.max_pages = 10
+        self.max_pages = 5
 
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -34,7 +34,7 @@ class UkPravda:
         }
 
         # CSV path and existing titles
-        self.csv_path = "../../../data/ukraine/ukpravda_original.csv"
+        self.csv_path = "data/preprocessing/ukr_rus/ukpravda_original.csv"
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:
@@ -57,13 +57,11 @@ class UkPravda:
             url = f"https://www.pravda.com.ua/eng/columns/?page={i}"
             html = await self.fetch(session, url)
             soup = await asyncio.to_thread(BeautifulSoup, html, "html.parser")
-            urls = [
-                a["href"].replace("\\", "").replace('"', "")
-                for a in soup.find_all("a")
-                if "href" in a.attrs and "eurointegration" not in a["href"]
-            ]
+            urls = [a["href"].replace("\\", "").replace('"', "") for a in soup.find_all("a") if "href" in a.attrs and "eurointegration" not in a["href"]]
             all_urls.extend(urls)
         self.df_titles = pd.DataFrame({"url": all_urls})
+        print(all_urls)
+
 
     async def extract_text(self, session):
         tasks = [self.fetch(session, row.url) for row in self.df_titles.itertuples()]

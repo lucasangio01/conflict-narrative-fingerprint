@@ -14,3 +14,10 @@ scraping Jpost, Ynet
 - [ISRAELE] Y Net - https://www.ynet.co.il/news/category/194                        97 (+ circa 4 al giorno)
 - [ISRAELE] Jerusalem Post - https://www.jpost.com/opinion                          30 (+ aggiornamenti quotidiani)
 - [PALESTINA] Al-Quds - https://www.alquds.com/en/categories/opinions/              240 (senza limite)
+
+# FILTRI SIMILARITA
+jpost - 0.4
+alquds - 0.4 (1971 chunks)
+ynet_global - 0.4 (274 chunks)
+ynet - 0.4 (554 chunks)
+ukpravda - 0.4 (1000)
