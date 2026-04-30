@@ -1,0 +1,504 @@
+!pip install -q transformers==4.37.2 spacy tqdm
+!python -m spacy download en_core_web_lg -q
+
+import pandas as pd
+import spacy
+import warnings
+import numpy as np
+from tqdm import tqdm
+from transformers import pipeline
+
+warnings.filterwarnings('ignore')
+
+
+# --- 1. CONFIGURATION ---
+
+website = "alquds"
+clean_data_file = f"{website}_final.csv"
+MIN_OCCURRENCES = 3   # minimum times an entity must appear to be included in report
+
+# en_core_web_lg ships with a dependency parser that handles sentence segmentation.
+# Do NOT add a sentencizer — it conflicts with the parser and degrades boundaries.
+nlp = spacy.load("en_core_web_lg")
+
+print("✨ Initializing RoBERTa Sentiment Transformer...")
+try:
+    sentiment_task = pipeline(
+        "sentiment-analysis",
+        model="cardiffnlp/twitter-roberta-base-sentiment-latest",
+        device=0, batch_size=16
+    )
+    print("   ✅ Running on GPU")
+except Exception as e:
+    print(f"   ⚠️  GPU unavailable ({e}), falling back to CPU")
+    sentiment_task = pipeline(
+        "sentiment-analysis",
+        model="cardiffnlp/twitter-roberta-base-sentiment-latest",
+        device=-1
+    )
+
+
+# --- 2. SYNONYM MAP ---
+# Rules:
+#   - No single ambiguous common words ("us", "army", "forces", "government")
+#   - Multi-word phrases preferred
+#   - Resolves to canonical key used in the theater dict
+
+SYNONYM_MAP = {
+    # --- USA / WEST ---
+    "the united states": "usa", "u.s.": "usa", "united states": "usa",
+    "washington": "usa", "america": "usa", "state department": "usa",
+    "the white house": "usa", "brussels": "eu", "european union": "eu",
+
+    # --- UKRAINE / RUSSIA ---
+    "kyiv": "kiev",
+    "vladimir zelensky": "zelensky", "volodymyr zelensky": "zelensky",
+    "andriy yermak": "yermak",
+    "the office of the president": "ukraine", "office of the president": "ukraine",
+    "vladimir putin": "putin",
+    "russian federation": "russia", "the kremlin": "kremlin", "ussr": "russia",
+    "warsaw": "poland", "berlin": "germany", "paris": "france",
+
+    # --- ISRAEL / PALESTINE ---
+    "the state of israel": "israel", "the knesset": "israel",
+    "tel aviv": "israel", "judea and samaria": "israel",
+    "the zionist entity": "israel",
+    "benjamin netanyahu": "netanyahu", "bibi": "netanyahu",
+    "israeli defense forces": "idf", "iaf": "idf",
+    "israeli army": "idf", "occupation forces": "idf",
+    "the gaza strip": "gaza", "gaza strip": "gaza", "the strip": "gaza",
+    "mahmoud abbas": "abbas", "abu mazen": "abbas",
+    "mansour abbas": "mansour_abbas",
+    "palestinian authority": "pa", "the palestinian authority": "pa",
+    "hamas movement": "hamas",
+    "yahya sinwar": "sinwar", "ismail haniyeh": "haniyeh",
+    "al-qassam brigades": "qassam", "izz ad-din al-qassam": "qassam",
+    "the resistance": "militants", "armed groups": "militants",
+    "the west bank": "palestine", "west bank": "palestine",
+    "the state of palestine": "palestine", "east jerusalem": "palestine",
+    "oslo accords": "pa",
+    "unrwa": "un", "united nations relief": "un",
+    "international court of justice": "icj", "international court": "icj",
+    "türkiye": "turkey",
+
+    # --- IRAN AXIS ---
+    "the islamic republic": "iran", "tehran": "iran",
+    "irgc": "iran", "khamenei": "iran",
+}
+
+
+# --- 3. THEATER DICTIONARIES ---
+# Rules:
+#   - No generic common nouns ("army", "forces", "troops", "soldiers", "government",
+#     "residents", "fighters") — these fire on any army/government/fighters in the text
+#   - Named units, named individuals, and specific organisations only
+
+RU_UK_BASE = {
+    # Russian political/state
+    "russia": "RU_POLITICAL", "putin": "RU_POLITICAL",
+    "moscow": "RU_POLITICAL", "kremlin": "RU_POLITICAL", "lavrov": "RU_POLITICAL",
+
+    # Ukrainian political/state
+    "ukraine": "UKR_POLITICAL", "zelensky": "UKR_POLITICAL",
+    "kiev": "UKR_POLITICAL", "yermak": "UKR_POLITICAL",
+    "zaporizhzhia": "UKR_POLITICAL", "crimea": "UKR_POLITICAL",
+    "kharkiv": "UKR_POLITICAL", "donetsk": "UKR_POLITICAL",
+
+    # Military — named units only
+    "wagner": "RU_MILITARY",
+    "afu": "UKR_MILITARY", "azov": "UKR_MILITARY", "syrskyi": "UKR_MILITARY",
+
+    # Western actors
+    "usa": "WEST_ACTORS", "nato": "WEST_ACTORS", "eu": "WEST_ACTORS",
+    "biden": "WEST_ACTORS", "trump": "WEST_ACTORS",
+    "poland": "WEST_ACTORS", "germany": "WEST_ACTORS", "france": "WEST_ACTORS",
+
+    # International
+    "china": "INTL_ACTORS", "un": "INTL_ACTORS",
+    "iaea": "INTL_ACTORS", "turkey": "INTL_ACTORS",
+
+    "civilians": "CIVILIANS", "refugees": "CIVILIANS",
+}
+
+IZ_PA_BASE = {
+    # Israeli political/state
+    "netanyahu": "ISR_POLITICAL", "israel": "ISR_POLITICAL",
+    "knesset": "ISR_POLITICAL", "mansour_abbas": "ISR_POLITICAL",
+    "gallant": "ISR_POLITICAL", "gantz": "ISR_POLITICAL",
+
+    # Israeli military/security — named institutions only
+    "idf": "ISR_MILITARY", "mossad": "ISR_MILITARY", "shin bet": "ISR_MILITARY",
+
+    # Palestinian political
+    "abbas": "PAL_POLITICAL", "pa": "PAL_POLITICAL", "palestine": "PAL_POLITICAL",
+
+    # Palestinian organisations
+    "hamas": "PAL_ORG", "haniyeh": "PAL_ORG", "sinwar": "PAL_ORG", "pij": "PAL_ORG",
+
+    # Palestinian resistance / territory
+    "militants": "PAL_RESISTANCE", "qassam": "PAL_RESISTANCE", "gaza": "PAL_RESISTANCE",
+
+    # International
+    "usa": "INTL_ACTORS", "un": "INTL_ACTORS", "icj": "INTL_ACTORS",
+    "biden": "INTL_ACTORS", "trump": "INTL_ACTORS",
+    "iran": "INTL_ACTORS", "lebanon": "INTL_ACTORS", "turkey": "INTL_ACTORS",
+    "syria": "INTL_ACTORS", "hezbollah": "INTL_ACTORS",
+    "saudi arabia": "INTL_ACTORS", "qatar": "INTL_ACTORS", "egypt": "INTL_ACTORS",
+
+    "civilians": "CIVILIANS", "hostages": "CIVILIANS", "settlers": "SETTLERS",
+}
+
+
+# --- 4. THEATER SWITCH ---
+
+is_il_pa = website in ["ynet", "ynet_global", "alquds", "jpost", "aljazeera"]
+active_entities = IZ_PA_BASE if is_il_pa else RU_UK_BASE
+theater_name    = "Israel-Palestine" if is_il_pa else "Russia-Ukraine"
+
+search_keys = sorted(
+    list(set(list(SYNONYM_MAP.keys()) + list(active_entities.keys()))),
+    key=len, reverse=True
+)
+
+print(f"🌍 Theater Detected: {theater_name} — website: {website}")
+
+
+# --- 5. PRONOUN GROUP TRACKING ---
+# "we/our/ours" → IN_GROUP framing; "they/them/their/theirs" → OUT_GROUP framing
+# "us" is intentionally excluded — too ambiguous (fires on "told us", "among us")
+# Only tracked when the pronoun occupies a syntactic subject or object position.
+
+PRONOUN_GROUPS = {
+    "we":     "IN_GROUP",
+    "our":    "IN_GROUP",
+    "ours":   "IN_GROUP",
+    "they":   "OUT_GROUP",
+    "them":   "OUT_GROUP",
+    "their":  "OUT_GROUP",
+    "theirs": "OUT_GROUP",
+}
+
+# Dependency relations that indicate a token is a grammatical subject or object
+SUBJECT_OBJECT_DEPS = {"nsubj", "nsubjpass", "dobj", "obj"}
+
+
+# --- 6. VERB FEATURE SETS ---
+
+VIOLENT_VERBS = {
+    "attack", "bomb", "kill", "destroy", "invade", "strike", "shell",
+    "target", "raid", "fire", "shoot", "assassinate", "massacre", "wound",
+    "besiege", "execute", "detain", "arrest", "expel"
+}
+
+MODAL_VERBS = {"may", "might", "could", "would", "should", "can"}
+
+HEDGES = {
+    "seem", "appear", "likely", "possible", "allege", "probable",
+    "suggest", "warn", "claim", "reportedly", "allegedly", "apparently"
+}
+
+
+# --- 7. ENTITY MATCHING (unified with co-occurrence and directed network scripts) ---
+
+def get_entity_from_token(token, doc):
+    """
+    Matches a token to a known entity using two strategies in order:
+      1. Full noun chunk the token belongs to  (best for multi-word entities)
+      2. ±3 token window fallback
+    Returns (canonical_name, label) or (None, None).
+    Only called on tokens in syntactic subject/object positions.
+    """
+    chunk_text = next(
+        (chunk.text.lower() for chunk in doc.noun_chunks
+         if token.i in range(chunk.start, chunk.end)),
+        None
+    )
+    window_text = " ".join(
+        t.text.lower()
+        for t in doc[max(0, token.i - 3): min(len(doc), token.i + 4)]
+    )
+
+    for candidate_text in filter(None, [chunk_text, window_text]):
+        match = next((k for k in search_keys if k in candidate_text), None)
+        if match:
+            clean = SYNONYM_MAP.get(match, match)
+            if clean in active_entities:
+                return clean, active_entities[clean]
+
+    return None, None
+
+
+def resolve_token(token, doc):
+    """
+    Resolves a syntactic subject/object token to either:
+      - A named entity (name, label) from the theater dictionary
+      - A pronoun group (lemma, group_label) if the token is a tracked pronoun
+        in a subject or object dependency position
+    Returns (name, label, is_pronoun) or (None, None, False).
+    """
+    # Named entity match (primary path)
+    name, label = get_entity_from_token(token, doc)
+    if name:
+        return name, label, False
+
+    # Pronoun group match — only when in subject/object position
+    if token.dep_ in SUBJECT_OBJECT_DEPS:
+        lemma = token.lemma_.lower()
+        if lemma in PRONOUN_GROUPS:
+            return lemma, PRONOUN_GROUPS[lemma], True
+
+    return None, None, False
+
+
+# --- 8. UNCERTAINTY SCORING ---
+
+def calculate_uncertainty(sent):
+    """
+    Proportion of tokens in the sentence that are modal verbs or hedge markers.
+    Returns float in [0, 1].
+    """
+    if len(sent) == 0:
+        return 0.0
+    count = sum(
+        1 for t in sent
+        if t.lemma_.lower() in MODAL_VERBS or t.lemma_.lower() in HEDGES
+    )
+    return round(count / len(sent), 4)
+
+
+# --- 9. SENTIMENT SCORING (batched) ---
+
+def build_sentiment_cache(texts_list):
+    """
+    Collects all unique sentences across the corpus, scores them in one
+    batched RoBERTa pass, and returns a dict {sentence_text: polarity}.
+    Much faster than per-sentence inference inside the main loop, and
+    consistent with the directed network script's approach.
+    """
+    print("📦 Collecting unique sentences for RoBERTa batch scoring...")
+    unique_sents = set()
+    for doc in nlp.pipe(texts_list, batch_size=32, disable=["ner"]):
+        for sent in doc.sents:
+            unique_sents.add(sent.text.strip())
+
+    unique_sents = list(unique_sents)
+    polarities = {}
+    batch_size = 64
+
+    print(f"🤖 Scoring {len(unique_sents):,} unique sentences with RoBERTa...")
+    for i in tqdm(range(0, len(unique_sents), batch_size)):
+        batch = unique_sents[i: i + batch_size]
+        try:
+            results = sentiment_task([s[:512] for s in batch])
+            for sent_text, result in zip(batch, results):
+                label, score = result['label'], result['score']
+                if label == 'positive':   polarities[sent_text] = score
+                elif label == 'negative': polarities[sent_text] = -score
+                else:                     polarities[sent_text] = 0.0
+        except Exception:
+            for sent_text in batch:
+                polarities[sent_text] = 0.0
+
+    return polarities
+
+
+# --- 10. MAIN EXTRACTION LOOP ---
+
+df = pd.read_csv(clean_data_file)
+texts_list = df['text'].dropna().astype(str).tolist()
+all_actions = []
+
+# Build sentiment cache in one batched RoBERTa pass before the main loop
+sentiment_cache = build_sentiment_cache(texts_list)
+
+print(f"🚀 Analyzing {len(texts_list)} articles for {website}...")
+
+# NER disabled — all entity matching is dictionary-based; doc.ents is never used
+for doc in tqdm(nlp.pipe(texts_list, batch_size=32, disable=["ner"]), total=len(texts_list)):
+    for sent in doc.sents:
+        u_score = calculate_uncertainty(sent)
+        s_score = sentiment_cache.get(sent.text.strip(), 0.0)
+
+        for token in sent:
+
+            # Only examine syntactic subjects and direct objects
+            if token.dep_ not in SUBJECT_OBJECT_DEPS:
+                continue
+
+            # Skip if the head is not a verb
+            if token.head.pos_ != "VERB":
+                continue
+
+            ent_name, ent_label, is_pronoun = resolve_token(token, doc)
+            if not ent_name:
+                continue
+
+            verb = token.head.lemma_.lower()
+            identity_group = (
+                ent_label if is_pronoun
+                else "NAMED_ENTITY"
+            )
+
+            # --- Active voice: nsubj → AGENT ---
+            if token.dep_ == "nsubj":
+                all_actions.append({
+                    "Entity":         ent_name,
+                    "Label":          ent_label,
+                    "Role":           "AGENT",
+                    "Verb":           verb,
+                    "Voice":          "active",
+                    "Sentiment":      s_score,
+                    "Uncertainty":    u_score,
+                    "Is_Violent":     verb in VIOLENT_VERBS,
+                    "Is_Pronoun":     is_pronoun,
+                    "Identity_Group": identity_group,
+                })
+
+            # --- Active voice: dobj/obj → PATIENT ---
+            elif token.dep_ in ("dobj", "obj"):
+                all_actions.append({
+                    "Entity":         ent_name,
+                    "Label":          ent_label,
+                    "Role":           "PATIENT",
+                    "Verb":           verb,
+                    "Voice":          "active",
+                    "Sentiment":      s_score,
+                    "Uncertainty":    u_score,
+                    "Is_Violent":     verb in VIOLENT_VERBS,
+                    "Is_Pronoun":     is_pronoun,
+                    "Identity_Group": identity_group,
+                })
+
+            # --- Passive voice: nsubjpass → PATIENT (grammatical subject, logical object) ---
+            elif token.dep_ == "nsubjpass":
+                # Record the passive subject as PATIENT
+                all_actions.append({
+                    "Entity":         ent_name,
+                    "Label":          ent_label,
+                    "Role":           "PATIENT",
+                    "Verb":           verb,
+                    "Voice":          "passive",
+                    "Sentiment":      s_score,
+                    "Uncertainty":    u_score,
+                    "Is_Violent":     verb in VIOLENT_VERBS,
+                    "Is_Pronoun":     is_pronoun,
+                    "Identity_Group": identity_group,
+                })
+
+                # If there's a "by X" agent, record X as AGENT of the same event
+                for child in token.head.children:
+                    if child.dep_ == "agent":
+                        for grandchild in child.children:
+                            if grandchild.dep_ == "pobj":
+                                ag_name, ag_label, ag_pronoun = resolve_token(grandchild, doc)
+                                if ag_name:
+                                    all_actions.append({
+                                        "Entity":         ag_name,
+                                        "Label":          ag_label,
+                                        "Role":           "AGENT",
+                                        "Verb":           verb,
+                                        "Voice":          "passive",   # same construction label
+                                        "Sentiment":      s_score,
+                                        "Uncertainty":    u_score,
+                                        "Is_Violent":     verb in VIOLENT_VERBS,
+                                        "Is_Pronoun":     ag_pronoun,
+                                        "Identity_Group": ag_label if ag_pronoun else "NAMED_ENTITY",
+                                    })
+
+
+# --- 11. BUILD REPORT ---
+
+results_df = pd.DataFrame(all_actions)
+
+if results_df.empty:
+    print("⚠️  No actions extracted. Check your entity dictionary and input data.")
+else:
+    # Filter to entities that appear at least MIN_OCCURRENCES times
+    entity_counts = results_df['Entity'].value_counts()
+    valid_entities = entity_counts[entity_counts >= MIN_OCCURRENCES].index
+    results_df = results_df[results_df['Entity'].isin(valid_entities)]
+
+    # --- Label-level report ---
+    label_agg = results_df.groupby('Label')
+
+    label_report = (
+        results_df.groupby(['Label', 'Role'])
+        .size()
+        .unstack(fill_value=0)
+    )
+    for col in ['AGENT', 'PATIENT']:
+        if col not in label_report.columns:
+            label_report[col] = 0
+
+    label_report['Agency_Ratio']  = (
+        label_report['AGENT'] / (label_report['AGENT'] + label_report['PATIENT'])
+    ).round(4)
+    label_report['Violence_Rate'] = label_agg['Is_Violent'].mean().round(4)
+    label_report['Avg_Sentiment'] = label_agg['Sentiment'].mean().round(4)
+    label_report['Avg_Uncertainty'] = label_agg['Uncertainty'].mean().round(4)
+
+    # --- Entity-level report (more granular) ---
+    entity_report = (
+        results_df.groupby(['Entity', 'Label', 'Role'])
+        .size()
+        .unstack(fill_value=0)
+    )
+    for col in ['AGENT', 'PATIENT']:
+        if col not in entity_report.columns:
+            entity_report[col] = 0
+
+    entity_report['Agency_Ratio'] = (
+        entity_report['AGENT'] / (entity_report['AGENT'] + entity_report['PATIENT'])
+    ).round(4)
+
+    # --- Pronoun / identity group report ---
+    pronoun_df = results_df[results_df['Is_Pronoun'] == True]
+    if not pronoun_df.empty:
+        identity_report = (
+            pronoun_df.groupby(['Identity_Group', 'Role'])
+            .size()
+            .unstack(fill_value=0)
+        )
+        for col in ['AGENT', 'PATIENT']:
+            if col not in identity_report.columns:
+                identity_report[col] = 0
+        identity_report['Agency_Ratio'] = (
+            identity_report['AGENT'] / (identity_report['AGENT'] + identity_report['PATIENT'])
+        ).round(4)
+    else:
+        identity_report = pd.DataFrame()
+
+    # --- Violent verb breakdown per label ---
+    violent_df = results_df[results_df['Is_Violent'] == True]
+    violent_verb_report = (
+        violent_df.groupby(['Label', 'Verb'])
+        .size()
+        .reset_index(name='count')
+        .sort_values('count', ascending=False)
+    )
+
+    # --- Print reports ---
+    print(f"\n{'='*60}")
+    print(f"  AGENCY ANALYSIS REPORT: {website} ({theater_name})")
+    print(f"{'='*60}")
+
+    print("\n--- [LEVEL 1] LABEL CATEGORY AGENCY ---")
+    print(label_report.sort_values('Agency_Ratio', ascending=False).to_string())
+
+    print("\n--- [LEVEL 2] ENTITY-LEVEL AGENCY ---")
+    print(entity_report.sort_values('Agency_Ratio', ascending=False).to_string())
+
+    if not identity_report.empty:
+        print("\n--- [LEVEL 3] PRONOUN IN-GROUP / OUT-GROUP FRAMING ---")
+        print(identity_report.to_string())
+
+    print("\n--- [LEVEL 4] TOP VIOLENT VERB USAGE BY LABEL ---")
+    print(violent_verb_report.head(20).to_string(index=False))
+
+
+# --- 12. SAVE OUTPUT ---
+# Only the raw action records are saved — all reports above are groupby views
+# on this file and can be recomputed from it at any time.
+
+results_df.to_csv(f"{website}_agency_actions.csv", index=False)
+print(f"\n✅ Saved: {website}_agency_actions.csv — {len(results_df):,} action records")

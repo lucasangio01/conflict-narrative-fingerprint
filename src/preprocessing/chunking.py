@@ -41,5 +41,4 @@ def chunk_resolved_data(website_name, max_chars=800):
 
 # --- EXECUTION ---
 
-website = "alquds"
 df_chunked = chunk_resolved_data(website)

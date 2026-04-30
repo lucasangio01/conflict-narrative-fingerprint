@@ -4,11 +4,9 @@ import logging
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from src.utils import constants
+from ..utils import constants
 
-
-logging.getLogger(__name__)
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 
 class Translation:
@@ -66,7 +64,6 @@ class CleaningPipeline:
             self.original_language = "english"
         self.csv_path_original = f"1_{self.website}_original.csv"
 
-
     def clean_date(self):
             self.df = pd.read_csv(self.csv_path_original)
 
@@ -114,7 +111,6 @@ class TranslationPipeline:
             print(f"🏷️ Translating {len(self.df)} titles...")
             titles = self.df['title'].fillna("").astype(str).tolist()
             self.df["title_en"] = self.translator.batch_translate(titles)
-            
         translated_articles = []
         texts = self.df['text'].dropna().astype(str).tolist()
 
@@ -126,16 +122,3 @@ class TranslationPipeline:
 
         self.df["text_en"] = translated_articles
         return self.df
-
-
-
-if __name__ == "__main__":
-    website = "alquds"
-    cleaner = CleaningPipeline(website)
-    df_cleaned = cleaner.clean_date()
-
-    pipe = TranslationPipeline(df=df_cleaned, language=cleaner.original_language)
-    df_translated = pipe.translate_full_text()
-
-    df_translated.to_csv(f"2_{website}_english.csv", index=False)
-    print("✅ Success! Translation and cleaning complete.")    

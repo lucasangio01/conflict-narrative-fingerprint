@@ -7,23 +7,25 @@ import transformers
 from tqdm import tqdm
 from transformers.modeling_utils import PreTrainedModel
 
-PreTrainedModel._sdpa_can_dispatch = lambda self, is_init_check=False: False
-PreTrainedModel._check_and_enable_sdpa = lambda self, config, **kwargs: "eager"
+def patched_check_and_enable_sdpa(cls, config, **kwargs):
+    return config
+
+def patched_sdpa_can_dispatch(cls, **kwargs):
+    return False
+
+PreTrainedModel._check_and_enable_sdpa = classmethod(patched_check_and_enable_sdpa)
+PreTrainedModel._sdpa_can_dispatch = classmethod(patched_sdpa_can_dispatch)
 
 try:
     import fastcoref.modeling as modeling
     for attr in dir(modeling):
-        if "LingMess" in attr:
+        if "Coref" in attr:
             target_class = getattr(modeling, attr)
-            target_class.all_tied_weights_keys = {}
-    print("✅ Successfully patched LingMess weight-tying logic.")
+            if hasattr(target_class, "all_tied_weights_keys"):
+                target_class.all_tied_weights_keys = []
+    print("✅ Successfully patched Coref weight-tying logic.")
 except Exception as e:
-    print(f"⚠️ Tied-weights patch warning: {e}")
-
-import transformers.utils.import_utils as imp_utils
-setattr(transformers.utils, "is_tf_available", lambda: False)
-setattr(imp_utils, "is_tf_available", lambda: False)
-
+    print(f"⚠️ Patch warning: {e}")
 from fastcoref import spacy_component
 
 nlp = spacy.load("en_core_web_sm", exclude=["parser", "lemmatizer", "ner", "textcat"])
@@ -89,7 +91,6 @@ def run_full_article_coref_lingmess(df, website_name):
 
 # --- EXECUTION ---
 
-website = "alquds"
 try:
     raw_df = pd.read_csv(f"2_{website}_english.csv", low_memory=False)
     df_resolved = run_full_article_coref_lingmess(raw_df, website)

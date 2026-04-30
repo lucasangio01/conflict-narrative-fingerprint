@@ -1,0 +1,267 @@
+🌍 Theater Detected: Russia-Ukraine
+🎯 Tracking Concepts: security, peace, justice, war, civilian, russia, ukraine, putin, zelensky, nato
+
+🚀 Loading data...
+   kpru: 741 articles | ukpravda: 1,000 articles
+
+📝 Preprocessing corpora (sentence-aware)...
+   kpru:
+   ✨ Running spaCy pipeline with sentence segmentation...
+100%|██████████| 741/741 [00:06<00:00, 108.54it/s]
+   ukpravda:
+   ✨ Running spaCy pipeline with sentence segmentation...
+100%|██████████| 1000/1000 [00:09<00:00, 101.53it/s]
+   Raw token counts: 37,707 (kpru) vs 54,291 (ukpravda)
+
+⚖️  Balancing corpora by token count...
+   Balanced token counts: 37,707 vs 37,850
+
+🤖 Training Word2Vec models...
+   Vocab sizes: 2,325 (kpru) | 2,252 (ukpravda)
+
+🔗 Aligning embedding spaces (Procrustes)...
+
+🔁 Running stability bootstrap tests...
+   Stability iteration 1/5...
+   Stability iteration 2/5...
+   Stability iteration 3/5...
+   Stability iteration 4/5...
+   Stability iteration 5/5...
+
+⚖️  Computing log-odds z-scores...
+Computing log-odds z-scores: 100%|██████████| 8399/8399 [00:00<00:00, 154150.26it/s]
+
+--- STATISTICALLY SIGNIFICANT ANCHORS: KPRU ---
+     word  z_score  count_site1  count_site2
+    trump  15.2176          515           97
+ zelensky  12.9833          678            9
+president  11.4188          366          104
+ vladimir  10.8567          244           22
+     head  10.0911          210           26
+     late   9.2068          204            9
+      say   8.9447          172           28
+   donald   7.4404          131           28
+  meeting   6.6645          104            5
+    photo   6.6545          210            2
+
+--- STATISTICALLY SIGNIFICANT ANCHORS: UKPRAVDA ---
+         word  z_score  count_site1  count_site2
+       future  -6.3118           26          104
+      nuclear  -6.4278           12           87
+          law  -7.0056           20          110
+        scale  -7.0459           12          103
+        crime  -7.8857           17          130
+      support  -7.9344           48          175
+       europe  -8.3276           95          258
+international  -9.9899           25          207
+      ukraine -10.5694          826         1309
+          war -13.5306          130          491
+
+📐 Computing narrative entropy over shared distinctive vocabulary...
+Computing log-odds z-scores: 100%|██████████| 8399/8399 [00:00<00:00, 395971.04it/s]
+--- NARRATIVE ENTROPY (shared vocabulary of 617 words) ---
+Site            | H (raw)    | H (normalized)
+---------------------------------------------
+KPRU            | 7.9446     | 0.8571
+UKPRAVDA        | 8.1809     | 0.8826
+Higher normalized entropy → more dispersed use of distinctive vocabulary
+
+--- SEMANTIC DRIFT: TOP 15 MOST DRIFTED WORDS ---
+         word  drift
+        worry 0.4193
+         sick 0.3982
+   exhaustion 0.3775
+        judge 0.2957
+        tired 0.2014
+ consultation 0.1982
+     withdraw 0.1981
+        touch 0.1817
+       father 0.1662
+       online 0.1523
+  demographic 0.1462
+  appropriate 0.1457
+         door 0.1442
+determination 0.1317
+  legislation 0.1314
+
+--- COMPREHENSIVE NARRATIVE DIVERGENCE REPORT (Word2Vec) ---
+CONCEPT      | FREQ1  | FREQ2  | JACCARD μ  | STD     | NULL μ   | P-VAL   | SIG
+-------------------------------------------------------------------------------------
+
+SECURITY     | 58     | 131    | 0.7026     | 0.0762  | 0.7748   | 0.8     | 
+PEACE        | 155    | 96     | 0.7383     | 0.0393  | 0.8142   | 0.88    | 
+JUSTICE      | 10     | 39     | 0.9709     | 0.0431  | 0.8955   | 0.0     | ⭐
+WAR          | 130    | 491    | 0.6937     | 0.0508  | 0.7638   | 0.88    | 
+CIVILIAN     | 26     | 76     | 0.7969     | 0.0628  | 0.8006   | 0.66    | 
+RUSSIA       | 538    | 578    | 0.7373     | 0.054   | 0.6683   | 0.22    | 
+UKRAINE      | 826    | 1309   | 0.7475     | 0.055   | 0.7282   | 0.58    | 
+PUTIN        | 257    | 139    | 0.77       | 0.0245  | 0.8218   | 0.78    | 
+ZELENSKY     | 678    | 9      | 0.9492     | 0.0439  | 0.8407   | 0.04    | ⭐
+NATO         | 50     | 52     | 0.7573     | 0.0635  | 0.8088   | 0.7     | 
+
+--- NEIGHBORHOOD ANALYSIS PER CONCEPT (Word2Vec) ---
+
+  SECURITY | Jaccard: 0.75 | Centroid drift: 0.0
+    kpru only: ['european', 'kiev', 'meeting', 'people', 'say', 'state', 'today', 'western']
+    ukpravda only: ['continue', 'include', 'international', 'law', 'military', 'support', 'time', 'ukrainian']
+    Shared:         ['country', 'europe', 'russia', 'russian', 'ukraine', 'world']
+
+  PEACE | Jaccard: 0.8 | Centroid drift: 0.0
+    kpru only: ['begin', 'day', 'europe', 'kiev', 'military', 'new', 'say', 'think']
+    ukpravda only: ['future', 'include', 'moscow', 'people', 'policy', 'political', 'support', 'time']
+    Shared:         ['russia', 'russian', 'state', 'ukraine', 'ukrainian']
+
+  JUSTICE | Jaccard: 0.9286 | Centroid drift: 0.0
+    kpru only: ['conflict', 'end', 'europe', 'main', 'military', 'organization', 'people', 'possible']
+    ukpravda only: ['country', 'create', 'european', 'include', 'international', 'partner', 'policy', 'remain']
+    Shared:         ['peace', 'ukraine']
+
+  WAR | Jaccard: 0.6364 | Centroid drift: 0.0
+    kpru only: ['day', 'good', 'hand', 'kiev', 'military', 'region', 'year']
+    ukpravda only: ['crime', 'force', 'international', 'political', 'society', 'support', 'world']
+    Shared:         ['country', 'people', 'russia', 'russian', 'state', 'time', 'ukraine', 'ukrainian']
+
+  CIVILIAN | Jaccard: 0.75 | Centroid drift: 0.0
+    kpru only: ['call', 'day', 'kiev', 'know', 'state', 'think', 'today', 'year']
+    ukpravda only: ['child', 'crime', 'lead', 'military', 'national', 'new', 'political', 'war']
+    Shared:         ['europe', 'russia', 'russian', 'time', 'ukraine', 'ukrainian']
+
+  RUSSIA | Jaccard: 0.6364 | Centroid drift: 0.0
+    kpru only: ['country', 'day', 'europe', 'kiev', 'people', 'say', 'try']
+    ukpravda only: ['continue', 'force', 'international', 'moscow', 'political', 'state', 'support']
+    Shared:         ['military', 'new', 'russian', 'time', 'ukraine', 'ukrainian', 'war', 'world']
+
+  UKRAINE | Jaccard: 0.5 | Centroid drift: 0.0
+    kpru only: ['kiev', 'military', 'say', 'think', 'today']
+    ukpravda only: ['europe', 'international', 'law', 'political', 'ukrainians']
+    Shared:         ['country', 'new', 'people', 'russia', 'russian', 'state', 'time', 'ukrainian']
+
+  PUTIN | Jaccard: 0.75 | Centroid drift: 0.0
+    kpru only: ['american', 'day', 'kiev', 'meeting', 'peace', 'say', 'today', 'trump']
+    ukpravda only: ['child', 'country', 'force', 'law', 'lead', 'political', 'ukrainians', 'war']
+    Shared:         ['people', 'russia', 'russian', 'time', 'ukraine', 'ukrainian']
+
+  ZELENSKY | Jaccard: 0.9655 | Centroid drift: 0.0
+    kpru only: ['country', 'kiev', 'meeting', 'military', 'negotiation', 'people', 'putin', 'russian']
+    ukpravda only: ['act', 'challenge', 'change', 'current', 'destroy', 'election', 'free', 'future']
+    Shared:         ['russia']
+
+  NATO | Jaccard: 0.6957 | Centroid drift: 0.0
+    kpru only: ['american', 'hand', 'kiev', 'meeting', 'people', 'russian', 'say', 'way']
+    ukpravda only: ['european', 'international', 'law', 'moscow', 'national', 'policy', 'security', 'war']
+    Shared:         ['country', 'russia', 'state', 'time', 'ukraine', 'ukrainian', 'world']
+
+======================================================================
+  GLOVE ANALYSIS (pretrained, stable — Common Crawl 840B tokens)
+  No alignment needed — both corpora share the same vector space.
+======================================================================
+
+--- GLOVE NEIGHBORHOOD DIVERGENCE PER CONCEPT ---
+CONCEPT      | JACCARD   | CENTROID DRIFT
+----------------------------------------
+SECURITY     | 0.8182    | 0.0676
+PEACE        | 0.7812    | 0.0614
+JUSTICE      | 0.9118    | 0.1593
+WAR          | 0.6552    | 0.0574
+CIVILIAN     | 0.7419    | 0.0716
+RUSSIA       | 0.8529    | 0.0839
+UKRAINE      | 0.8857    | 0.1298
+PUTIN        | 0.7812    | 0.0786
+ZELENSKY     | N/A       | N/A
+NATO         | 0.7333    | 0.0282
+
+--- GLOVE NEIGHBORHOOD DETAILS PER CONCEPT ---
+
+  SECURITY | Jaccard: 0.8182 | Centroid drift: 0.0676
+    kpru only: ['adviser', 'apos', 'assurance', 'country', 'head', 'kiev', 'national', 'people']
+    ukpravda only: ['architecture', 'defense', 'europe', 'future', 'guarantee', 'include', 'international', 'military']
+    Shared:         ['european', 'president', 'russia', 'russian', 'ukraine', 'united']
+    ── Centroid semantic region ──
+    kpru centroid → ['american', 'america', 'poland', 'germany', 'moscow', 'moscow', 'asia', 'british']
+    ukpravda centroid → ['germany', 'poland', 'america', 'american', 'asia', 'soviet', 'israel', 'british']
+
+  PEACE | Jaccard: 0.7812 | Centroid drift: 0.0614
+    kpru only: ['achieve', 'agreement', 'head', 'istanbul', 'kiev', 'negotiation', 'putin', 'russian']
+    ukpravda only: ['effort', 'europe', 'european', 'international', 'last', 'leader', 'party', 'point']
+    Shared:         ['donald', 'plan', 'president', 'russia', 'trump', 'ukraine', 'war']
+    ── Centroid semantic region ──
+    kpru centroid → ['moscow', 'moscow', 'poland', 'germany', 'israel', 'soviet', 'romania', 'czech']
+    ukpravda centroid → ['germany', 'united', 'united', 'united', 'america', 'poland', 'israel', 'american']
+
+  JUSTICE | Jaccard: 0.9118 | Centroid drift: 0.1593
+    kpru only: ['bring', 'constantin', 'country', 'day', 'diplomacy', 'divorcee', 'energy', 'european']
+    ukpravda only: ['conflict', 'ensure', 'fight', 'figure', 'human', 'international', 'moscow', 'peace']
+    Shared:         ['crime', 'russia', 'ukraine']
+    ── Centroid semantic region ──
+    kpru centroid → ['government', 'government', 'affairs', 'affairs', 'political', 'political', 'foreign', 'foreign']
+    ukpravda centroid → ['united', 'united', 'united', 'europe', 'europe', 'republic', 'republic', 'germany']
+
+  WAR | Jaccard: 0.6552 | Centroid drift: 0.0574
+    kpru only: ['great', 'military', 'moscow', 'peace', 'president', 'say', 'trump', 'vladimir']
+    ukpravda only: ['crime', 'european', 'international', 'need', 'political', 'scale', 'security', 'ukrainian']
+    Shared:         ['country', 'end', 'europe', 'putin', 'russia', 'russian', 'state', 'time']
+    ── Centroid semantic region ──
+    kpru centroid → ['america', 'germany', 'soviet', 'poland', 'united', 'united', 'united', 'israel']
+    ukpravda centroid → ['poland', 'germany', 'asia', 'soviet', 'sweden', 'russians', 'czech', 'romania']
+
+  CIVILIAN | Jaccard: 0.7419 | Centroid drift: 0.0716
+    kpru only: ['apos', 'army', 'criminal', 'drone', 'human', 'humanitarian', 'kill', 'locate']
+    ukpravda only: ['crime', 'destroy', 'energy', 'international', 'need', 'operation', 'prisoner', 'protection']
+    Shared:         ['attack', 'infrastructure', 'military', 'object', 'population', 'russia', 'russian', 'ukraine']
+    ── Centroid semantic region ──
+    kpru centroid → ['force', 'force', 'forces', 'forces', 'enemy', 'enemy', 'armed', 'armed']
+    ukpravda centroid → ['soviet', 'foreign', 'foreign', 'government', 'government', 'european', 'european', 'country']
+
+  RUSSIA | Jaccard: 0.8529 | Centroid drift: 0.0839
+    kpru only: ['apos', 'donald', 'foreign', 'head', 'kiev', 'negotiation', 'peace', 'president']
+    ukpravda only: ['action', 'aggression', 'continue', 'crime', 'destroy', 'europe', 'european', 'international']
+    Shared:         ['country', 'russian', 'ukraine', 'ukrainian', 'war']
+    ── Centroid semantic region ──
+    kpru centroid → ['moscow', 'moscow', 'poland', 'israel', 'germany', 'soviet', 'america', 'republic']
+    ukpravda centroid → ['germany', 'soviet', 'poland', 'american', 'america', 'republic', 'republic', 'israel']
+
+  UKRAINE | Jaccard: 0.8857 | Centroid drift: 0.1298
+    kpru only: ['affairs', 'andrei', 'foreign', 'head', 'kiev', 'late', 'office', 'peace']
+    ukpravda only: ['continue', 'corruption', 'country', 'europe', 'international', 'military', 'need', 'nuclear']
+    Shared:         ['european', 'russia', 'russian', 'ukrainian']
+    ── Centroid semantic region ──
+    kpru centroid → ['moscow', 'moscow', 'america', 'soviet', 'republic', 'republic', 'israel', 'poland']
+    ukpravda centroid → ['america', 'american', 'germany', 'soviet', 'countries', 'countries', 'republic', 'republic']
+
+  PUTIN | Jaccard: 0.7812 | Centroid drift: 0.0786
+    kpru only: ['call', 'come', 'donald', 'kiev', 'late', 'meet', 'meeting', 'moscow']
+    ukpravda only: ['believe', 'china', 'democracy', 'european', 'federation', 'hold', 'incompatible', 'liberal']
+    Shared:         ['president', 'russia', 'russian', 'trump', 'ukraine', 'ukrainian', 'vladimir']
+    ── Centroid semantic region ──
+    kpru centroid → ['poland', 'obama', 'israel', 'united', 'united', 'united', 'america', 'jewish']
+    ukpravda centroid → ['republic', 'republic', 'europe', 'europe', 'russians', 'germany', 'poland', 'america']
+
+  NATO | Jaccard: 0.7333 | Centroid drift: 0.0282
+    kpru only: ['article', 'attack', 'begin', 'conflict', 'country', 'european', 'kiev', 'lithuania']
+    ukpravda only: ['aggression', 'ally', 'border', 'defense', 'finland', 'future', 'guarantee', 'membership']
+    Shared:         ['europe', 'russia', 'russian', 'security', 'states', 'ukraine', 'ukrainian', 'united']
+    ── Centroid semantic region ──
+    kpru centroid → ['poland', 'germany', 'moscow', 'moscow', 'america', 'soviet', 'soviet', 'sweden']
+    ukpravda centroid → ['germany', 'poland', 'soviet', 'soviet', 'moscow', 'moscow', 'america', 'israel']
+
+--- METHOD COMPARISON: Word2Vec vs GloVe ---
+CONCEPT      | W2V Jaccard   | W2V C-drift   | GLoVe Jaccard   | GLoVe C-drift
+---------------------------------------------------------------------------
+SECURITY     | 0.7500        | 0.0000        | 0.8182          | 0.0676
+PEACE        | 0.8000        | 0.0000        | 0.7812          | 0.0614
+JUSTICE      | 0.9286        | 0.0000        | 0.9118          | 0.1593
+WAR          | 0.6364        | 0.0000        | 0.6552          | 0.0574
+CIVILIAN     | 0.7500        | 0.0000        | 0.7419          | 0.0716
+RUSSIA       | 0.6364        | 0.0000        | 0.8529          | 0.0839
+UKRAINE      | 0.5000        | 0.0000        | 0.8857          | 0.1298
+PUTIN        | 0.7500        | 0.0000        | 0.7812          | 0.0786
+ZELENSKY     | 0.9655        | 0.0000        | N/A             | N/A
+NATO         | 0.6957        | 0.0000        | 0.7333          | 0.0282
+
+Interpretation guide:
+  High W2V / Low GloVe  → outlet-specific framing not captured by pretrained vectors
+                           (corpus-idiosyncratic usage, possible domain-specific sense)
+  High GloVe / Low W2V  → divergence in general associations, W2V unstable on this word
+                           (likely corpus size issue — treat W2V result with caution)
+  Both high             → robust divergence confirmed by both methods ✅
+  Both low              → concept used similarly across both outlets

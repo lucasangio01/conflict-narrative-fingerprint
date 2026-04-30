@@ -21,3 +21,10 @@ alquds - 0.4 (1971 chunks)
 ynet_global - 0.4 (274 chunks)
 ynet - 0.4 (554 chunks)
 ukpravda - 0.4 (1000)
+
+# ALTRO
+
+kpru -> scraped articles: 313 (2213 chunks), remaining chunks: 741, date range: april 2025 - feb 2026
+russia today -> scraped articles: 150 (1312 chunks), remaining chunks: 528, date range: october 2025 - january 2026 (it became unaccessible in EU after)
+ukrainska pravda -> scraped articles: 146 (1941 chunks), remaining chunks: 1000, date range: april 2024 - march 2026
+liganet -> scraped articles: 80 (405 chunks), remaining chunks: 181, date range: 
