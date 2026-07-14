@@ -9,7 +9,7 @@ from collections import Counter
 from itertools import combinations
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from emfdscore.scoring import score_docs
-from src.utils.constants import Axis, Verbs, NamesDicts
+from src.utils.constants import Axis, Verbs, NamesDicts, PretrainedModels
 
 
 
@@ -20,8 +20,8 @@ class NarrativeAnalyzer:
     def __init__(self, website: str, device: str = None):
         self.website = website
         self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
-        
-        self.nlp = spacy.load("en_core_web_lg")
+
+        self.nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
         if not self.nlp.has_pipe("sentencizer"):
             self.nlp.add_pipe("sentencizer")
         

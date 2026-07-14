@@ -4,7 +4,7 @@ import logging
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from ..utils import constants
+from src.utils.constants import Months, PretrainedModels
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,7 +16,7 @@ class Translation:
         self.tokenizers = {}
         self.language = language.lower()
 
-        model_paths = {"hebrew": "Helsinki-NLP/opus-mt-tc-big-he-en", "russian": "Helsinki-NLP/opus-mt-ru-en"}
+        model_paths = PretrainedModels.TRANSLATION_MODEL_PATHS
 
         if self.language in model_paths:
             path = model_paths[self.language]
@@ -70,16 +70,16 @@ class CleaningPipeline:
             if self.website == "jpost":
                 self.df["date"] = self.df["date"].astype(str).str.replace(r'(?<=\w)\s(?=\w)', '', regex=True)
 
-            pattern_en = r"\b(" + "|".join(constants.Months.MONTHS_WORDS1.keys()) + r")\b"
-            pattern_ru = r"\b(" + "|".join(constants.Months.MONTHS_RUSSIAN.keys()) + r")\b"
-            pattern_days = r"\b(" + "|".join(constants.Months.DAYS_TO_REPLACE) + r")\b"
-            pattern_abbr = r"\b(" + "|".join(constants.Months.MONTHS_WORDS_ABBR.keys()) + r")\b"
+            pattern_en = r"\b(" + "|".join(Months.MONTHS_WORDS1.keys()) + r")\b"
+            pattern_ru = r"\b(" + "|".join(Months.MONTHS_RUSSIAN.keys()) + r")\b"
+            pattern_days = r"\b(" + "|".join(Months.DAYS_TO_REPLACE) + r")\b"
+            pattern_abbr = r"\b(" + "|".join(Months.MONTHS_WORDS_ABBR.keys()) + r")\b"
 
             self.df["date"] = (self.df["date"].astype(str)
                 .str.replace(pattern_days, "", regex=True, flags=re.IGNORECASE)
-                .str.replace(pattern_en, lambda m: constants.Months.MONTHS_WORDS1[m.group(0).title()], regex=True, flags=re.IGNORECASE)
-                .str.replace(pattern_ru, lambda m: constants.Months.MONTHS_RUSSIAN[m.group(0).lower()], regex=True, flags=re.IGNORECASE)
-                .str.replace(pattern_abbr, lambda m: constants.Months.MONTHS_WORDS_ABBR[m.group(0).title()], regex=True, flags=re.IGNORECASE))
+                .str.replace(pattern_en, lambda m: Months.MONTHS_WORDS1[m.group(0).title()], regex=True, flags=re.IGNORECASE)
+                .str.replace(pattern_ru, lambda m: Months.MONTHS_RUSSIAN[m.group(0).lower()], regex=True, flags=re.IGNORECASE)
+                .str.replace(pattern_abbr, lambda m: Months.MONTHS_WORDS_ABBR[m.group(0).title()], regex=True, flags=re.IGNORECASE))
 
             self.df["date"] = (self.df["date"]
                 .str.replace(r"[,/]", " ", regex=True)
@@ -122,3 +122,18 @@ class TranslationPipeline:
 
         self.df["text_en"] = translated_articles
         return self.df
+
+
+def main(website="alquds"):
+    cleaner = CleaningPipeline(website)
+    df_cleaned = cleaner.clean_date()
+
+    pipe = TranslationPipeline(df=df_cleaned, language=cleaner.original_language)
+    df_translated = pipe.translate_full_text()
+
+    df_translated.to_csv(f"2_{website}_english.csv", index=False)
+    print("✅ Success! Translation and cleaning complete.")
+
+
+if __name__ == "__main__":
+    main()

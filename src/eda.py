@@ -3,14 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import warnings
+from src.utils.constants import EdaConfig
 warnings.filterwarnings('ignore')
-
-
-RU_UK_OUTLETS = {"KP.RU": "kpru", "RT":"rt", "Ukrainska Pravda": "ukpravda", "Liga.net": "liganet"}
-IL_PA_OUTLETS = {"Jerusalem Post": "jpost", "Ynet": "ynet", "Ynet Global": "ynet_global", "Al-Quds": "alquds"}
-
-SIDE_MAP_RU_UK = {"KP.RU": "Russian", "RT": "Russian", "Ukrainska Pravda": "Ukrainian", "Liga.net": "Ukrainian"}
-SIDE_MAP_IL_PA = {"Jerusalem Post": "Israeli", "Ynet": "Israeli", "Ynet Global": "Israeli", "Al-Quds": "Palestinian"}
 
 
 def safe_load(path):
@@ -71,7 +65,7 @@ def collect_stats(outlet_dict, side_map, theater_name):
             avg_tox = df_final["toxicity"].mean()
 
         if df_final is not None and all(c in df_final.columns for c in ["filter1", "filter2", "filter3"]):
-            avg_rel = df_final[["filter1", "filter2", "filter3"]].max(axis = 1).mean()
+            avg_rel = df_final[["filter1", "filter2", "filter3"]].max(axis=1).mean()
 
         rows.append({
             "Outlet": name,
@@ -207,7 +201,7 @@ def plot_overview(combined_df, stats_df, theater_name, side_colors):
     ret_filter = stats_df["Retention after filter (%)"].apply(lambda x: x if isinstance(x, float) else 0).tolist()
     ret_final = stats_df["Retention final (%)"].apply(lambda x: x if isinstance(x, float) else 0).tolist()
     x2 = np.arange(len(outlets))
-    ax4.bar(x2 - 0.2, ret_filter, 0.35,label="After semantic filter", color="steelblue", edgecolor="white", alpha=0.8)
+    ax4.bar(x2 - 0.2, ret_filter, 0.35, label="After semantic filter", color="steelblue", edgecolor="white", alpha=0.8)
     ax4.bar(x2 + 0.2, ret_final, 0.35, label="After toxicity scoring", color=colors, edgecolor="white", alpha=0.85)
     ax4.axhline(y=100, color="grey", linestyle="--", linewidth=0.8, alpha=0.5)
     ax4.set_xticks(x2)
@@ -227,37 +221,38 @@ def plot_overview(combined_df, stats_df, theater_name, side_colors):
     print(f"  📊 Saved: {fname}")
 
 
-print("🚀 Computing corpus statistics...\n")
+def main():
+    print("🚀 Computing corpus statistics...\n")
 
-print("📂 Russia-Ukraine Theater:")
-ru_uk_stats, ru_uk_df = collect_stats(RU_UK_OUTLETS, SIDE_MAP_RU_UK, "Russia-Ukraine")
+    print("📂 Russia-Ukraine Theater:")
+    ru_uk_stats, ru_uk_df = collect_stats(EdaConfig.RU_UK_OUTLETS, EdaConfig.SIDE_MAP_RU_UK, "Russia-Ukraine")
 
-print("\n📂 Israel-Palestine Theater:")
-il_pa_stats, il_pa_df = collect_stats(IL_PA_OUTLETS, SIDE_MAP_IL_PA, "Israel-Palestine")
+    print("\n📂 Israel-Palestine Theater:")
+    il_pa_stats, il_pa_df = collect_stats(EdaConfig.IL_PA_OUTLETS, EdaConfig.SIDE_MAP_IL_PA, "Israel-Palestine")
 
-if ru_uk_stats is not None and len(ru_uk_stats) > 0:
-    print_summary(ru_uk_stats, "Russia-Ukraine")
+    if ru_uk_stats is not None and len(ru_uk_stats) > 0:
+        print_summary(ru_uk_stats, "Russia-Ukraine")
 
-if il_pa_stats is not None and len(il_pa_stats) > 0:
-    print_summary(il_pa_stats, "Israel-Palestine")
+    if il_pa_stats is not None and len(il_pa_stats) > 0:
+        print_summary(il_pa_stats, "Israel-Palestine")
 
-print(f"\n{'='*75}")
-print(f"  COMBINED CORPUS — ALL THEATERS")
-print(f"{'='*75}")
-all_stats = pd.concat([s for s in [ru_uk_stats, il_pa_stats] if s is not None], ignore_index=True)
-for col in ["Scraped Articles", "Total Chunks", "Filtered Chunks", "Final Chunks", "Total Words"]:
-    if col in all_stats.columns:
-        total = all_stats[col].apply(
-            lambda x: x if isinstance(x, int) else 0).sum()
-        print(f"  {col:<30}: {total:,}")
+    print(f"\n{'='*75}")
+    print(f"  COMBINED CORPUS — ALL THEATERS")
+    print(f"{'='*75}")
+    all_stats = pd.concat([s for s in [ru_uk_stats, il_pa_stats] if s is not None], ignore_index=True)
+    for col in ["Scraped Articles", "Total Chunks", "Filtered Chunks", "Final Chunks", "Total Words"]:
+        if col in all_stats.columns:
+            total = all_stats[col].apply(lambda x: x if isinstance(x, int) else 0).sum()
+            print(f"  {col:<30}: {total:,}")
 
-print("\n📊 Generating plots...")
-RU_UK_COLORS = {"Russian": "#C0392B", "Ukrainian": "#2980B9"}
-IL_PA_COLORS = {"Israeli": "#1A5276", "Palestinian": "#1E8449"}
+    print("\n📊 Generating plots...")
+    if ru_uk_df is not None:
+        plot_overview(ru_uk_df, ru_uk_stats, "Russia-Ukraine", EdaConfig.RU_UK_COLORS)
+    if il_pa_df is not None:
+        plot_overview(il_pa_df, il_pa_stats, "Israel-Palestine", EdaConfig.IL_PA_COLORS)
 
-if ru_uk_df is not None:
-    plot_overview(ru_uk_df, ru_uk_stats, "Russia-Ukraine", RU_UK_COLORS)
-if il_pa_df is not None:
-    plot_overview(il_pa_df, il_pa_stats, "Israel-Palestine", IL_PA_COLORS)
+    print("\n✅ Done.")
 
-print("\n✅ Done. Paste the printed output and share the plots with Claude.")
+
+if __name__ == "__main__":
+    main()

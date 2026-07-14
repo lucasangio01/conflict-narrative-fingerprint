@@ -1,0 +1,9 @@
+source,target,verb,sentiment,passive,label_s,label_o
+ukraine,russia,surpass,0.8960282206535339,False,UKR_POLITICAL,RU_POLITICAL
+eu,usa,rely,0.0,False,WEST_ACTORS,WEST_ACTORS
+ukraine,eu,abandon,0.0,False,UKR_POLITICAL,WEST_ACTORS
+zelensky,putin,tell,0.0,False,UKR_POLITICAL,RU_POLITICAL
+zelensky,putin,meet,0.0,False,UKR_POLITICAL,RU_POLITICAL
+ukraine,eu,turn,-0.6985646486282349,False,UKR_POLITICAL,WEST_ACTORS
+putin,eu,target,-0.6985646486282349,False,RU_POLITICAL,WEST_ACTORS
+usa,russia,pressure,0.0,False,WEST_ACTORS,RU_POLITICAL

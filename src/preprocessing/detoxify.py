@@ -1,6 +1,7 @@
 from detoxify import Detoxify
 import torch
 import pandas as pd
+from src.utils.constants import PreprocessingConfig
 
 
 def run_toxicity_scoring(website_name):
@@ -8,7 +9,7 @@ def run_toxicity_scoring(website_name):
     df = pd.read_csv(f"6_{website_name}_filtered.csv")
 
     texts = df["text"].astype(str).tolist()
-    batch_size = 32
+    batch_size = PreprocessingConfig.TOXICITY_BATCH_SIZE
     tox_scores = []
 
     print(f"🧪 Scoring toxicity for {len(texts)} relevant chunks...")
@@ -29,7 +30,9 @@ def run_toxicity_scoring(website_name):
     print(f"🏁 PIPELINE COMPLETE! Final file: {final_output}")
 
 
-# --- EXECUTION ---
+def main(website="alquds"):
+    run_toxicity_scoring(website)
 
-website = "alquds"
-run_toxicity_scoring(website)
+
+if __name__ == "__main__":
+    main()

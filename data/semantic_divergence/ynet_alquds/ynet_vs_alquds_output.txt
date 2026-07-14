@@ -1,0 +1,263 @@
+🌍 Theater Detected: Israel-Palestine
+🎯 Tracking Concepts: security, peace, justice, war, civilian, israel, palestine, hamas, idf, netanyahu
+
+🚀 Loading data...
+   ynet: 554 articles | alquds: 1,924 articles
+
+📝 Preprocessing corpora (sentence-aware)...
+   ynet:
+   ✨ Running spaCy pipeline with sentence segmentation...
+100%|██████████| 554/554 [00:08<00:00, 62.38it/s]
+   alquds:
+   ✨ Running spaCy pipeline with sentence segmentation...
+100%|██████████| 1924/1924 [00:23<00:00, 81.56it/s]
+   Raw token counts: 28,781 (ynet) vs 105,265 (alquds)
+
+⚖️  Balancing corpora by token count...
+   Balanced token counts: 28,781 vs 29,816
+
+🤖 Training Word2Vec models...
+   Vocab sizes: 1,946 (ynet) | 1,803 (alquds)
+
+   ⚠️  WARNING: One or both Word2Vec vocabularies are below 2,000 types.
+   W2V embeddings are likely degenerate on this corpus size.
+   Neighborhood and drift results will be reported but should NOT be interpreted.
+   Treat GloVe results as the primary analysis for this corpus pair.
+
+🔗 Aligning embedding spaces (Procrustes)...
+
+⏭️  Skipping stability bootstrap — W2V vocabulary too small for reliable results.
+
+⚖️  Computing log-odds z-scores...
+Computing log-odds z-scores: 100%|██████████| 5852/5852 [00:00<00:00, 97207.42it/s]
+
+--- STATISTICALLY SIGNIFICANT ANCHORS: YNET ---
+     word  z_score  count_site1  count_site2
+   israel  13.1549          776          350
+   regime   8.3193          152           30
+     time   6.3858          144           54
+   public   5.8495          116           42
+president   5.5056          101           36
+   change   5.4296          110           43
+    arena   5.2771           67           16
+ campaign   5.2490           57            9
+    woman   5.1933           55            8
+   turkey   5.1277           53            7
+
+--- STATISTICALLY SIGNIFICANT ANCHORS: ALQUDS ---
+         word  z_score  count_site1  count_site2
+        right  -6.2040           48          140
+     conflict  -6.2321           47          139
+     national  -6.5026           36          127
+      project  -6.6356            9           94
+         bank  -6.9234           13          103
+ palestinians  -7.3680           32          140
+   occupation  -8.2975           11          151
+    political  -9.3506          150          380
+international  -9.5584           50          229
+  palestinian -16.4338           42          589
+
+📐 Computing narrative entropy over shared distinctive vocabulary...
+Computing log-odds z-scores: 100%|██████████| 5852/5852 [00:00<00:00, 265659.38it/s]
+
+--- NARRATIVE ENTROPY (shared vocabulary of 498 words) ---
+Site            | H (raw)    | H (normalized)
+---------------------------------------------
+YNET            | 7.9872     | 0.8914
+ALQUDS          | 7.8792     | 0.8794
+Higher normalized entropy → more dispersed use of distinctive vocabulary
+
+--- SEMANTIC DRIFT: TOP 15 MOST DRIFTED WORDS ---
+        word  drift
+  particular 0.7314
+ devastating 0.2823
+        dare 0.2492
+   greenland 0.2209
+       shift 0.2038
+     respond 0.1910
+     dictate 0.1861
+  accordance 0.1828
+constitution 0.1735
+       delay 0.1714
+    upcoming 0.1651
+  confidence 0.1628
+    analysis 0.1626
+      victim 0.1571
+     violate 0.1521
+
+--- COMPREHENSIVE NARRATIVE DIVERGENCE REPORT (Word2Vec) ---
+    ⚠️  UNRELIABLE — vocab sizes (1946, 1803) below threshold (2000)
+    Results shown for completeness only. Use GloVe section below.
+
+CONCEPT      | FREQ1  | FREQ2  | JACCARD μ  | STD     | NULL μ   | P-VAL   | SIG
+-------------------------------------------------------------------------------------
+SECURITY     | 136    | 158    | skipped (unreliable)
+PEACE        | 45     | 105    | skipped (unreliable)
+JUSTICE      | 12     | 33     | skipped (unreliable)
+WAR          | 200    | 239    | skipped (unreliable)
+CIVILIAN     | 22     | 17     | skipped (unreliable)
+ISRAEL       | 776    | 350    | skipped (unreliable)
+PALESTINE    | 0      | 93     | skipped (unreliable)
+HAMAS        | 210    | 132    | skipped (unreliable)
+IDF          | 49     | 2      | skipped (unreliable)
+NETANYAHU    | 73     | 84     | skipped (unreliable)
+
+--- NEIGHBORHOOD ANALYSIS PER CONCEPT (Word2Vec) ---
+    ⚠️  UNRELIABLE — shown for reference only
+
+
+  SECURITY | Jaccard: 0.8462 | Centroid drift: 0.0
+    ynet only: ['continue', 'country', 'gaza', 'government', 'idf', 'iran', 'regime', 'return']
+    alquds only: ['international', 'israeli', 'netanyahu', 'occupation', 'palestinian', 'palestinians', 'policy', 'power']
+    Shared:         ['force', 'iranian', 'israel', 'political']
+
+  PEACE | Jaccard: 0.8462 | Centroid drift: 0.0
+    ynet only: ['change', 'gaza', 'government', 'iran', 'iranian', 'new', 'party', 'public']
+    alquds only: ['administration', 'american', 'committee', 'international', 'military', 'occupation', 'palestine', 'palestinian']
+    Shared:         ['hamas', 'israel', 'israeli', 'political']
+
+  JUSTICE | Jaccard: 0.8462 | Centroid drift: 0.0
+    ynet only: ['country', 'deep', 'important', 'internal', 'iran', 'islamic', 'minister', 'new']
+    alquds only: ['government', 'hamas', 'international', 'israeli', 'occupation', 'palestinian', 'palestinians', 'power']
+    Shared:         ['gaza', 'israel', 'political', 'right']
+
+  WAR | Jaccard: 0.8462 | Centroid drift: 0.0
+    ynet only: ['clear', 'day', 'government', 'hamas', 'military', 'new', 'power', 'public']
+    alquds only: ['continue', 'iranian', 'israeli', 'occupation', 'palestinian', 'palestinians', 'project', 'regional']
+    Shared:         ['iran', 'israel', 'political', 'state']
+
+  CIVILIAN | Jaccard: 0.8889 | Centroid drift: 0.0
+    ynet only: ['come', 'gaza', 'government', 'iranian', 'israel', 'israeli', 'netanyahu', 'party']
+    alquds only: ['arab', 'continue', 'cost', 'country', 'form', 'influence', 'international', 'occupation']
+    Shared:         ['iran', 'power', 'state']
+
+  ISRAEL | Jaccard: 0.8462 | Centroid drift: 0.0
+    ynet only: ['clear', 'country', 'gaza', 'government', 'regime', 'return', 'state', 'strategic']
+    alquds only: ['american', 'international', 'iranian', 'israeli', 'military', 'national', 'palestinian', 'palestinians']
+    Shared:         ['hamas', 'iran', 'political', 'security']
+
+  HAMAS | Jaccard: 0.8 | Centroid drift: 0.0
+    ynet only: ['country', 'gaza', 'government', 'islamic', 'lebanon', 'new', 'regime', 'strategic']
+    alquds only: ['american', 'control', 'international', 'iranian', 'military', 'palestinian', 'palestinians', 'power']
+    Shared:         ['iran', 'israel', 'israeli', 'political', 'state']
+
+  NETANYAHU | Jaccard: 0.8 | Centroid drift: 0.0
+    ynet only: ['change', 'clear', 'government', 'hamas', 'minister', 'party', 'president', 'regime']
+    alquds only: ['american', 'control', 'international', 'iranian', 'military', 'new', 'palestinian', 'policy']
+    Shared:         ['iran', 'israel', 'israeli', 'political', 'security']
+
+======================================================================
+  GLOVE ANALYSIS (pretrained, stable — Common Crawl 840B tokens)
+  No alignment needed — both corpora share the same vector space.
+======================================================================
+
+--- GLOVE NEIGHBORHOOD DIVERGENCE PER CONCEPT ---
+CONCEPT      | JACCARD   | CENTROID DRIFT
+----------------------------------------
+SECURITY     | 0.7097    | 0.0345
+PEACE        | 0.8571    | 0.1148
+JUSTICE      | 0.9189    | 0.0944
+WAR          | 0.7879    | 0.0464
+CIVILIAN     | 0.9189    | 0.1122
+ISRAEL       | 0.7097    | 0.1029
+PALESTINE    | N/A       | N/A
+HAMAS        | 0.8235    | 0.0708
+IDF          | 0.8571    | 0.0997
+NETANYAHU    | 0.7097    | 0.0698
+
+--- GLOVE NEIGHBORHOOD DETAILS PER CONCEPT ---
+
+  SECURITY | Jaccard: 0.7097 | Centroid drift: 0.0345
+    ynet only: ['clear', 'consideration', 'country', 'economic', 'government', 'hamas', 'interest', 'public']
+    alquds only: ['american', 'control', 'international', 'national', 'occupation', 'palestinian', 'palestinians', 'people']
+    Shared:         ['arab', 'force', 'gaza', 'israel', 'israeli', 'military', 'political', 'state']
+    ── Centroid semantic region ──
+    ynet centroid → ['iran', 'iraq', 'palestine', 'terrorism', 'democratic', 'democratic', 'jews', 'muslim']
+    alquds centroid → ['palestine', 'iraq', 'muslim', 'iran', 'jewish', 'democratic', 'democratic', 'jews']
+
+  PEACE | Jaccard: 0.8571 | Centroid drift: 0.1148
+    ynet only: ['committee', 'consist', 'iran', 'lebanon', 'logo', 'netanyahu', 'new', 'plan']
+    alquds only: ['achieve', 'administration', 'authority', 'board', 'conflict', 'international', 'israeli', 'national']
+    Shared:         ['council', 'gaza', 'israel', 'palestinians', 'trump']
+    ── Centroid semantic region ──
+    ynet centroid → ['iraq', 'syria', 'palestine', 'obama', 'egypt', 'hamas', 'hamas', 'america']
+    alquds centroid → ['democratic', 'democratic', 'palestine', 'government', 'government', 'citizens', 'hamas', 'hamas']
+
+  JUSTICE | Jaccard: 0.9189 | Centroid drift: 0.0944
+    ynet only: ['claim', 'consideration', 'court', 'determination', 'equality', 'establish', 'european', 'face']
+    alquds only: ['achieve', 'base', 'bin', 'end', 'force', 'international', 'law', 'logic']
+    Shared:         ['israel', 'security', 'system']
+    ── Centroid semantic region ──
+    ynet centroid → ['reason', 'fact', 'regardless', 'regardless', 'concerned', 'matter', 'believe', 'reasons']
+    alquds centroid → ['government', 'government', 'freedom', 'citizens', 'country', 'democratic', 'democratic', 'war']
+
+  WAR | Jaccard: 0.7879 | Centroid drift: 0.0464
+    ynet only: ['arab', 'continue', 'country', 'hamas', 'iranian', 'iron', 'minister', 'public']
+    alquds only: ['american', 'bank', 'crime', 'happen', 'international', 'occupation', 'palestinian', 'people']
+    Shared:         ['end', 'gaza', 'iran', 'israel', 'israeli', 'military', 'political']
+    ── Centroid semantic region ──
+    ynet centroid → ['iraq', 'palestine', 'palestine', 'syria', 'muslim', 'america', 'jews', 'jews']
+    alquds centroid → ['iraq', 'palestine', 'palestine', 'america', 'jewish', 'muslim', 'jews', 'jews']
+
+  CIVILIAN | Jaccard: 0.9189 | Centroid drift: 0.1122
+    ynet only: ['arab', 'cohesion', 'committee', 'control', 'demonstrate', 'gaza', 'hamas', 'hand']
+    alquds only: ['agreement', 'conflict', 'crime', 'destruction', 'human', 'humanitarian', 'international', 'israeli']
+    Shared:         ['force', 'israel', 'strip']
+    ── Centroid semantic region ──
+    ynet centroid → ['iraq', 'terrorists', 'terrorism', 'palestinian', 'palestinian', 'iran', 'iran', 'palestine']
+    alquds centroid → ['forces', 'forces', 'terrorism', 'government', 'government', 'civil', 'army', 'army']
+
+  ISRAEL | Jaccard: 0.7097 | Centroid drift: 0.1029
+    ynet only: ['continue', 'country', 'minister', 'people', 'president', 'regime', 'threat', 'time']
+    alquds only: ['american', 'arab', 'conflict', 'force', 'international', 'israeli', 'military', 'palestinian']
+    Shared:         ['gaza', 'hamas', 'iran', 'political', 'security', 'state', 'states', 'united']
+    ── Centroid semantic region ──
+    ynet centroid → ['government', 'government', 'nation', 'nation', 'democratic', 'democratic', 'citizens', 'nations']
+    alquds centroid → ['iraq', 'palestine', 'palestine', 'syria', 'terrorism', 'muslim', 'iranian', 'iranian']
+
+  HAMAS | Jaccard: 0.8235 | Centroid drift: 0.0708
+    ynet only: ['disarm', 'hezbollah', 'iran', 'jihad', 'official', 'qatar', 'regime', 'senior']
+    alquds only: ['arab', 'bank', 'exist', 'force', 'israeli', 'military', 'movement', 'national']
+    Shared:         ['control', 'gaza', 'islamic', 'israel', 'return', 'year']
+    ── Centroid semantic region ──
+    ynet centroid → ['iraq', 'palestine', 'palestine', 'syria', 'palestinians', 'palestinians', 'muslim', 'iranian']
+    alquds centroid → ['iraq', 'palestine', 'palestine', 'muslim', 'palestinians', 'palestinians', 'terrorism', 'jews']
+
+  IDF | Jaccard: 0.8571 | Centroid drift: 0.0997
+    ynet only: ['biden', 'campaign', 'gaza', 'government', 'israeli', 'land', 'military', 'operate']
+    alquds only: ['bank', 'collapse', 'decline', 'exist', 'flip', 'foreign', 'palestinian', 'past']
+    Shared:         ['continue', 'force', 'hamas', 'israel', 'year']
+    ── Centroid semantic region ──
+    ynet centroid → ['war', 'war', 'iraq', 'terrorism', 'terrorists', 'army', 'army', 'forces']
+    alquds centroid → ['country', 'citizens', 'war', 'war', 'conflict', 'conflict', 'people', 'people']
+
+  NETANYAHU | Jaccard: 0.7097 | Centroid drift: 0.0698
+    ynet only: ['absolute', 'biden', 'claim', 'donald', 'iran', 'issue', 'new', 'opposition']
+    alquds only: ['agreement', 'force', 'intervention', 'israeli', 'military', 'palestinian', 'phase', 'plan']
+    Shared:         ['benjamin', 'gaza', 'government', 'international', 'israel', 'minister', 'state', 'trump']
+    ── Centroid semantic region ──
+    ynet centroid → ['obama', 'democratic', 'democratic', 'united', 'united', 'politics', 'politics', 'election']
+    alquds centroid → ['iraq', 'democratic', 'democratic', 'peace', 'peace', 'civil', 'democracy', 'democracy']
+
+--- METHOD COMPARISON: Word2Vec vs GloVe ---
+    ⚠️  W2V results unreliable (vocab: 1946/1803). GloVe is primary analysis.
+CONCEPT      | W2V Jaccard   | W2V C-drift   | GLoVe Jaccard   | GLoVe C-drift
+---------------------------------------------------------------------------
+SECURITY     | 0.8462        | 0.0000        | 0.7097          | 0.0345
+PEACE        | 0.8462        | 0.0000        | 0.8571          | 0.1148
+JUSTICE      | 0.8462        | 0.0000        | 0.9189          | 0.0944
+WAR          | 0.8462        | 0.0000        | 0.7879          | 0.0464
+CIVILIAN     | 0.8889        | 0.0000        | 0.9189          | 0.1122
+ISRAEL       | 0.8462        | 0.0000        | 0.7097          | 0.1029
+PALESTINE    | N/A           | N/A           | N/A             | N/A
+HAMAS        | 0.8000        | 0.0000        | 0.8235          | 0.0708
+IDF          | N/A           | N/A           | 0.8571          | 0.0997
+NETANYAHU    | 0.8000        | 0.0000        | 0.7097          | 0.0698
+
+Interpretation guide:
+  High W2V / Low GloVe  → outlet-specific framing not captured by pretrained vectors
+                           (corpus-idiosyncratic usage, possible domain-specific sense)
+  High GloVe / Low W2V  → divergence in general associations, W2V unstable on this word
+                           (likely corpus size issue — treat W2V result with caution)
+  Both high             → robust divergence confirmed by both methods ✅
+  Both low              → concept used similarly across both outlets

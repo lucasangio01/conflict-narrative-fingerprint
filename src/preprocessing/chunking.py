@@ -1,13 +1,14 @@
 import pandas as pd
 import re
+from src.utils.constants import PreprocessingConfig
 
 
-def chunk_resolved_data(website_name, max_chars=800):
+def chunk_resolved_data(website_name, max_chars=PreprocessingConfig.MAX_CHUNK_CHARS):
     input_file = f"3_{website_name}_resolved.csv"
     df = pd.read_csv(input_file)
 
     rows = []
-    stop_marker = "The use of site materials is allowed only"
+    stop_marker = PreprocessingConfig.STOP_MARKER
 
     print(f"✂️ Chunking resolved text for {len(df)} articles...")
 
@@ -39,6 +40,9 @@ def chunk_resolved_data(website_name, max_chars=800):
     return chunked_df
 
 
-# --- EXECUTION ---
+def main(website="alquds"):
+    return chunk_resolved_data(website)
 
-df_chunked = chunk_resolved_data(website)
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,8 @@
+from src.cli import run
+
+
 def main():
-    print("Hello from master-thesis!")
+    run()
 
 
 if __name__ == "__main__":

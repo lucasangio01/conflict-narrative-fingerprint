@@ -1,20 +1,20 @@
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import pandas as pd
+from src.utils.constants import Websites, PretrainedModels
 
 
 def create_embeddings(df_name):
     df_input = f"4_{df_name}_chunked.csv"
     df_output = f"5_{df_name}_embedded.csv"
 
-    df = pd.read_csv(df_input).dropna(subset = ["text"])
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    df = pd.read_csv(df_input).dropna(subset=["text"])
+    model = PretrainedModels.sentence_embedder()
 
-    if df_name in ["kpru", "ukpravda", "rt", "liganet"]:
-        filters = ["Russia Ukraine conflict", "Ukraine Russia relations", "Eastern Europe crisis"]
-    elif df_name in ["jpost", "alquds", "ynet", "ynet_global"]:
-        filters = ["Israel Palestine conflict", "Gaza West Bank situation", "Middle East political tensions"]
+    if df_name in Websites.WEBSITES_UKRAINE_RUSSIA:
+        filters = PretrainedModels.FILTERS_UKRAINE_RUSSIA
+    elif df_name in Websites.WEBSITES_PALESTINE_ISRAEL:
+        filters = PretrainedModels.FILTERS_PALESTINE_ISRAEL
 
     filter_embeddings = model.encode(filters, normalize_embeddings=True)
 
@@ -30,6 +30,9 @@ def create_embeddings(df_name):
     print(f"✅ Embeddings saved to {df_output}")
 
 
-# --- EXECUTION ---
+def main(website="alquds"):
+    create_embeddings(website)
 
-create_embeddings(website)
+
+if __name__ == "__main__":
+    main()
