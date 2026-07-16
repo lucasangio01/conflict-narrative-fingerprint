@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
 import warnings
 from src.utils.constants import AgencyConfig, PlotConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("AGENCY")
 
 
 def plot_agency_violence(website, agency_csv=None, agency_threshold=AgencyConfig.AGENCY_THRESHOLD, violence_threshold=AgencyConfig.VIOLENCE_THRESHOLD):
@@ -10,12 +13,12 @@ def plot_agency_violence(website, agency_csv=None, agency_threshold=AgencyConfig
     if agency_csv is None:
         agency_csv = AgencyConfig.AGENCY_CSV_PATTERN.format(website=website)
 
-    print(f"Generating Agency-Violence scatter for: {website}")
+    logger.info(f"Generating Agency-Violence scatter for: {website}")
 
     try:
         df = pd.read_csv(agency_csv)
     except FileNotFoundError:
-        print(f"⚠️ Error: Could not find {agency_csv}")
+        logger.error(f"Could not find {agency_csv}")
         return
 
     # Exclude pronoun-level labels (the IN_GROUP/OUT_GROUP values produced by
@@ -36,7 +39,7 @@ def plot_agency_violence(website, agency_csv=None, agency_threshold=AgencyConfig
     # Drop sparse labels
     sparse = summary[summary['n'] < AgencyConfig.MIN_N]['Label'].tolist()
     if sparse:
-        print(f"  Dropping sparse labels (n < {AgencyConfig.MIN_N}): {sparse}")
+        logger.warning(f"Dropping sparse labels (n < {AgencyConfig.MIN_N}): {sparse}")
     summary = summary[summary['n'] >= AgencyConfig.MIN_N]
 
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -94,7 +97,7 @@ def plot_agency_violence(website, agency_csv=None, agency_threshold=AgencyConfig
     plt.tight_layout()
     out = f"{website}_agency_violence.png"
     plt.savefig(out, format='png', dpi=300, bbox_inches='tight')
-    print(f"✅ Saved: {out}")
+    logger.info(f"Saved: {out}")
     plt.show()
     plt.close(fig)
 

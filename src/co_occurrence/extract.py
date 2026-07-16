@@ -6,6 +6,9 @@ from collections import Counter
 from itertools import combinations
 import warnings
 from src.utils.constants import NamesDicts, Websites, CoOccurrenceConfig, PretrainedModels, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("CO-OCCURRENCE")
 
 
 def main(website="alquds"):
@@ -24,7 +27,7 @@ def main(website="alquds"):
     # Sort by length descending so multi-word keys are matched before their substrings
     search_keys = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
 
-    print(f"🌍 Theater Detected: {theater_name} — website: {website}")
+    logger.info(f"Theater detected: {theater_name} — website: {website}")
 
     def get_entity_from_token(token, doc):
         """
@@ -55,7 +58,7 @@ def main(website="alquds"):
     raw_audit_counter = Counter()   # raw NER text → freq (for audit only)
     total_sentences   = 0           # true sentence count — required for correct PMI
 
-    print(f"🚀 Processing {len(texts_list)} articles for {website}...")
+    logger.info(f"Processing {len(texts_list)} articles for {website}...")
 
     for doc in tqdm(nlp.pipe(texts_list, batch_size=32), total=len(texts_list)):
 
@@ -78,7 +81,7 @@ def main(website="alquds"):
                 for pair in combinations(sorted(found_in_sent), 2):
                     pair_counts[pair] += 1
 
-    print(f"   Processed {total_sentences:,} sentences across {len(texts_list):,} articles")
+    logger.info(f"Processed {total_sentences:,} sentences across {len(texts_list):,} articles")
 
     results = []
     for (ent_a, ent_b), count in pair_counts.items():
@@ -121,15 +124,15 @@ def main(website="alquds"):
         .sort_values(by='count', ascending=False)
     )
 
-    print(f"\n--- TOP 15 ENTITY PAIRS BY RAW COUNT: {website} ---")
-    print(df_results[['entity_a', 'entity_b', 'count', 'jaccard', 'pmi']].head(15).to_string(index=False))
-
-    print(f"\n--- TOP 15 ENTITY PAIRS BY PMI (surprising co-occurrences): {website} ---")
-    pmi_df = df_results.sort_values('pmi', ascending=False)
-    print(pmi_df[['entity_a', 'entity_b', 'count', 'pmi']].head(15).to_string(index=False))
-
-    print(f"\n--- TOP 10 LABEL CATEGORY RELATIONSHIPS: {website} ---")
-    print(label_results.head(10).to_string(index=False))
+    report_lines = [
+        f"--- TOP 15 ENTITY PAIRS BY RAW COUNT: {website} ---",
+        df_results[['entity_a', 'entity_b', 'count', 'jaccard', 'pmi']].head(15).to_string(index=False),
+        f"--- TOP 15 ENTITY PAIRS BY PMI (surprising co-occurrences): {website} ---",
+        df_results.sort_values('pmi', ascending=False)[['entity_a', 'entity_b', 'count', 'pmi']].head(15).to_string(index=False),
+        f"--- TOP 10 LABEL CATEGORY RELATIONSHIPS: {website} ---",
+        label_results.head(10).to_string(index=False),
+    ]
+    logger.info("\n".join(report_lines))
 
     def is_recognized(name):
         clean = NamesDicts.SYNONYM_MAP.get(name, name)
@@ -139,10 +142,12 @@ def main(website="alquds"):
     audit_df['Recognized'] = audit_df['Name'].apply(is_recognized)
     unrecognized = audit_df[audit_df['Recognized'] == False]
 
-    print(f"\n--- AUDIT: TOP 20 UNRECOGNIZED NAMED ENTITIES ---")
-    print("(Frequent names not in your active entity dictionary)")
-    print("(Use this list to expand NamesDicts.SYNONYM_MAP in src/utils/constants.py)\n")
-    print(unrecognized[['Name', 'Freq']].head(20).to_string(index=False))
+    logger.info(
+        "--- AUDIT: TOP 20 UNRECOGNIZED NAMED ENTITIES ---\n"
+        "(Frequent names not in your active entity dictionary)\n"
+        "(Use this list to expand NamesDicts.SYNONYM_MAP in src/utils/constants.py)\n"
+        + unrecognized[['Name', 'Freq']].head(20).to_string(index=False)
+    )
 
     pairs_csv = CoOccurrenceConfig.PAIRS_CSV_PATTERN.format(website=website)
     labels_csv = CoOccurrenceConfig.LABELS_CSV_PATTERN.format(website=website)
@@ -152,10 +157,12 @@ def main(website="alquds"):
     label_results.to_csv(labels_csv, index=False)
     audit_df.to_csv(audit_csv, index=False)
 
-    print(f"\n✅ Saved:")
-    print(f"   {pairs_csv}   — full pair matrix with Jaccard + PMI")
-    print(f"   {labels_csv}  — label-level aggregation")
-    print(f"   {audit_csv}          — full NER audit for dictionary expansion")
+    logger.info(
+        "Saved:\n"
+        f"   {pairs_csv}   — full pair matrix with Jaccard + PMI\n"
+        f"   {labels_csv}  — label-level aggregation\n"
+        f"   {audit_csv}          — full NER audit for dictionary expansion"
+    )
 
     return df_results, label_results, audit_df
 

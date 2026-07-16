@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 from src.utils.constants import Websites, AgencyConfig, PlotConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("AGENCY")
 
 
 def plot_agency_bars(theater):
@@ -23,7 +26,7 @@ def plot_agency_bars(theater):
     outlet_colors  = cfg["outlet_colors"]
     labels_ordered = cfg["labels"]
 
-    print(f"Generating grouped agency bar chart for theater: {theater}")
+    logger.info(f"Generating grouped agency bar chart for theater: {theater}")
 
     frames = []
     for outlet in outlets:
@@ -93,7 +96,7 @@ def plot_agency_bars(theater):
     plt.tight_layout()
     out = f"{theater}_agency_bars.png"
     plt.savefig(out, format='png', dpi=300, bbox_inches='tight')
-    print(f"  Saved: {out}")
+    logger.info(f"Saved: {out}")
     plt.show()
     plt.close(fig)
 

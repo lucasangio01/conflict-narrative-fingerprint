@@ -8,12 +8,15 @@ from tqdm import tqdm
 from transformers import pipeline
 from emfdscore.scoring import score_docs
 from src.utils.constants import NamesDicts, Verbs, Lexicons, Axis, ClassifierConfig, PretrainedModels, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("CLASSIFIER")
 
 
 def main():
     warnings.filterwarnings('ignore')
 
-    print("Loading models...")
+    logger.info("Loading models...")
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
     sentiment_task = pipeline(
         "sentiment-analysis",
@@ -150,7 +153,7 @@ def main():
     all_rows = []
 
     for website, label in ClassifierConfig.SOURCE_LABELS.items():
-        print(f"\n[{website}] label={label}")
+        logger.info(f"[{website}] label={label}")
         try:
             df = pd.read_csv(PreprocessingConfig.STAGE_FINAL.format(website=website)).dropna(subset=["text"])
         except Exception:
@@ -165,15 +168,15 @@ def main():
         mask_pattern = build_mask_pattern(search_keys)
         raw_texts    = df["text"].astype(str).tolist()
 
-        print("  Masking entities...")
+        logger.info("Masking entities...")
         masked_texts = [soft_mask_text(t, active_ents, mask_pattern) for t in tqdm(raw_texts)]
 
-        print("  Structural extraction...")
+        logger.info("Structural extraction...")
         structural = [extract_structural_features(t, valid_labels, perspective) for t in tqdm(masked_texts)]
 
         # Filter BEFORE sampling so MAX_CHUNKS_PER_SOURCE applies to valid chunks only
         valid_idx = [i for i, f in enumerate(structural) if f["_entity_hit_count"] >= ClassifierConfig.MIN_ENTITY_HITS]
-        print(f"  Valid after entity filter: {len(valid_idx)}/{len(raw_texts)}")
+        logger.info(f"Valid after entity filter: {len(valid_idx)}/{len(raw_texts)}")
 
         if not valid_idx:
             continue
@@ -186,7 +189,7 @@ def main():
         df_filtered     = df.iloc[valid_idx]
         masked_to_score = [masked_texts[i] for i in valid_idx]
 
-        print("  Sentiment & MFT (on masked text)...")
+        logger.info("Sentiment & MFT (on masked text)...")
         chunk_sents = [p['score'] if p['label'] == 'positive' else -p['score'] for p in sentiment_task([t[:512] for t in masked_to_score])]
         mft_df = score_docs(pd.DataFrame({"text": masked_to_score}), 'emfd', 'all', 'bow', 'sentiment', len(masked_to_score))
 
@@ -205,7 +208,7 @@ def main():
 
     master_df = pd.DataFrame(all_rows).drop(columns=["_sent_ingroup_idx", "_sent_outgroup_idx", "_sents", "_entity_hit_count"])
     master_df.to_csv(ClassifierConfig.MERGED_DATA_CSV, index=False)
-    print(f"\nDone. Saved {len(master_df)} rows to {ClassifierConfig.MERGED_DATA_CSV}")
+    logger.info(f"Done. Saved {len(master_df)} rows to {ClassifierConfig.MERGED_DATA_CSV}")
 
     return master_df
 

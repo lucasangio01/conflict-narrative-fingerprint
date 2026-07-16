@@ -1,6 +1,9 @@
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 from src.utils.constants import Websites, PretrainedModels, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("PREPROCESSING")
 
 
 def create_embeddings(df_name):
@@ -17,7 +20,7 @@ def create_embeddings(df_name):
 
     filter_embeddings = model.encode(filters, normalize_embeddings=True)
 
-    print(f"🛰️ Generating embeddings for {len(df)} chunks...")
+    logger.info(f"Generating embeddings for {len(df)} chunks...")
     embeddings = model.encode(df["text"].tolist(), show_progress_bar=True, normalize_embeddings=True)
 
     df["filter1"] = cosine_similarity(embeddings, filter_embeddings[0].reshape(1, -1)).flatten().round(3)
@@ -26,7 +29,7 @@ def create_embeddings(df_name):
 
     df["embedding"] = embeddings.tolist()
     df.to_csv(df_output, index=False)
-    print(f"✅ Embeddings saved to {df_output}")
+    logger.info(f"Embeddings saved to {df_output}")
 
 
 def main(website="alquds"):

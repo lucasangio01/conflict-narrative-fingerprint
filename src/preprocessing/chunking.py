@@ -1,6 +1,9 @@
 import pandas as pd
 import re
 from src.utils.constants import PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("PREPROCESSING")
 
 
 def chunk_resolved_data(website_name, max_chars=PreprocessingConfig.MAX_CHUNK_CHARS):
@@ -10,7 +13,7 @@ def chunk_resolved_data(website_name, max_chars=PreprocessingConfig.MAX_CHUNK_CH
     rows = []
     stop_marker = PreprocessingConfig.STOP_MARKER
 
-    print(f"✂️ Chunking resolved text for {len(df)} articles...")
+    logger.info(f"Chunking resolved text for {len(df)} articles...")
 
     for _, row in df.iterrows():
         title, date = row["title"], row["date"]
@@ -36,7 +39,7 @@ def chunk_resolved_data(website_name, max_chars=PreprocessingConfig.MAX_CHUNK_CH
     chunked_df = pd.DataFrame(rows)
     output_file = PreprocessingConfig.STAGE_CHUNKED.format(website=website_name)
     chunked_df.to_csv(output_file, index=False)
-    print(f"✅ Created {len(chunked_df)} chunks. Saved to {output_file}")
+    logger.info(f"Created {len(chunked_df)} chunks. Saved to {output_file}")
     return chunked_df
 
 

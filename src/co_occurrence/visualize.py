@@ -4,6 +4,9 @@ import seaborn as sns
 import numpy as np
 import warnings
 from src.utils.constants import CoOccurrenceConfig, PlotConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("CO-OCCURRENCE")
 
 
 def plot_cooccurrence_visuals(website, pairs_csv, labels_csv, highlight_pairs=None):
@@ -22,7 +25,7 @@ def plot_cooccurrence_visuals(website, pairs_csv, labels_csv, highlight_pairs=No
                       force-annotate on the scatter plot, in addition to the
                       automatic top-PMI / top-Jaccard selection.
     """
-    print(f"Generating co-occurrence visualizations for: {website}")
+    logger.info(f"Generating co-occurrence visualizations for: {website}")
 
     pairs_df = pd.read_csv(pairs_csv)
 
@@ -89,7 +92,7 @@ def plot_cooccurrence_visuals(website, pairs_csv, labels_csv, highlight_pairs=No
     plt.tight_layout()
     heatmap_out = f"{website}_label_heatmap.png"
     plt.savefig(heatmap_out, format='png', dpi=300, bbox_inches='tight')
-    print(f"  Saved: {heatmap_out}")
+    logger.info(f"Saved: {heatmap_out}")
     plt.show()
     plt.close(fig1)
 
@@ -173,7 +176,7 @@ def plot_cooccurrence_visuals(website, pairs_csv, labels_csv, highlight_pairs=No
     plt.tight_layout()
     scatter_out = f"{website}_jaccard_pmi.png"
     plt.savefig(scatter_out, format='png', dpi=300, bbox_inches='tight')
-    print(f"  Saved: {scatter_out}")
+    logger.info(f"Saved: {scatter_out}")
     plt.show()
     plt.close(fig2)
 

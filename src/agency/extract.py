@@ -4,6 +4,9 @@ import warnings
 from tqdm import tqdm
 from transformers import pipeline
 from src.utils.constants import NamesDicts, Verbs, Websites, AgencyConfig, PretrainedModels, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("AGENCY")
 
 
 def main(website="alquds"):
@@ -13,12 +16,12 @@ def main(website="alquds"):
 
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
 
-    print("✨ Initializing RoBERTa Sentiment Transformer...")
+    logger.info("Initializing RoBERTa sentiment transformer...")
     try:
         sentiment_task = pipeline("sentiment-analysis", model=PretrainedModels.SENTIMENT_MODEL, device=0, batch_size=16)
-        print("   ✅ Running on GPU")
+        logger.info("Running on GPU")
     except Exception as e:
-        print(f"   ⚠️  GPU unavailable ({e}), falling back to CPU")
+        logger.warning(f"GPU unavailable ({e}), falling back to CPU")
         sentiment_task = pipeline("sentiment-analysis", model=PretrainedModels.SENTIMENT_MODEL, device=-1)
 
     is_il_pa = website in Websites.WEBSITES_PALESTINE_ISRAEL
@@ -27,7 +30,7 @@ def main(website="alquds"):
 
     search_keys = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
 
-    print(f"🌍 Theater Detected: {theater_name} — website: {website}")
+    logger.info(f"Theater detected: {theater_name} — website: {website}")
 
     def get_entity_from_token(token, doc):
         """
@@ -85,7 +88,7 @@ def main(website="alquds"):
         Much faster than per-sentence inference inside the main loop, and
         consistent with the directed network script's approach.
         """
-        print("📦 Collecting unique sentences for RoBERTa batch scoring...")
+        logger.info("Collecting unique sentences for RoBERTa batch scoring...")
         unique_sents = set()
         for doc in nlp.pipe(texts_list, batch_size=32, disable=["ner"]):
             for sent in doc.sents:
@@ -95,7 +98,7 @@ def main(website="alquds"):
         polarities = {}
         batch_size = 64
 
-        print(f"🤖 Scoring {len(unique_sents):,} unique sentences with RoBERTa...")
+        logger.info(f"Scoring {len(unique_sents):,} unique sentences with RoBERTa...")
         for i in tqdm(range(0, len(unique_sents), batch_size)):
             batch = unique_sents[i: i + batch_size]
             try:
@@ -117,7 +120,7 @@ def main(website="alquds"):
 
     sentiment_cache = build_sentiment_cache(texts_list)
 
-    print(f"🚀 Analyzing {len(texts_list)} articles for {website}...")
+    logger.info(f"Analyzing {len(texts_list)} articles for {website}...")
 
     for doc in tqdm(nlp.pipe(texts_list, batch_size=32, disable=["ner"]), total=len(texts_list)):
         for sent in doc.sents:
@@ -203,7 +206,7 @@ def main(website="alquds"):
     results_df = pd.DataFrame(all_actions)
 
     if results_df.empty:
-        print("⚠️  No actions extracted. Check your entity dictionary and input data.")
+        logger.warning("No actions extracted. Check your entity dictionary and input data.")
     else:
         entity_counts = results_df['Entity'].value_counts()
         valid_entities = entity_counts[entity_counts >= AgencyConfig.MIN_OCCURRENCES].index
@@ -240,26 +243,23 @@ def main(website="alquds"):
         violent_df = results_df[results_df['Is_Violent'] == True]
         violent_verb_report = (violent_df.groupby(['Label', 'Verb']).size().reset_index(name='count').sort_values('count', ascending=False))
 
-        print(f"\n{'='*60}")
-        print(f"  AGENCY ANALYSIS REPORT: {website} ({theater_name})")
-        print(f"{'='*60}")
-
-        print("\n--- [LEVEL 1] LABEL CATEGORY AGENCY ---")
-        print(label_report.sort_values('Agency_Ratio', ascending=False).to_string())
-
-        print("\n--- [LEVEL 2] ENTITY-LEVEL AGENCY ---")
-        print(entity_report.sort_values('Agency_Ratio', ascending=False).to_string())
-
+        report_lines = [
+            f"{'='*60}",
+            f"  AGENCY ANALYSIS REPORT: {website} ({theater_name})",
+            f"{'='*60}",
+            "--- [LEVEL 1] LABEL CATEGORY AGENCY ---",
+            label_report.sort_values('Agency_Ratio', ascending=False).to_string(),
+            "--- [LEVEL 2] ENTITY-LEVEL AGENCY ---",
+            entity_report.sort_values('Agency_Ratio', ascending=False).to_string(),
+        ]
         if not identity_report.empty:
-            print("\n--- [LEVEL 3] PRONOUN IN-GROUP / OUT-GROUP FRAMING ---")
-            print(identity_report.to_string())
-
-        print("\n--- [LEVEL 4] TOP VIOLENT VERB USAGE BY LABEL ---")
-        print(violent_verb_report.head(20).to_string(index=False))
+            report_lines += ["--- [LEVEL 3] PRONOUN IN-GROUP / OUT-GROUP FRAMING ---", identity_report.to_string()]
+        report_lines += ["--- [LEVEL 4] TOP VIOLENT VERB USAGE BY LABEL ---", violent_verb_report.head(20).to_string(index=False)]
+        logger.info("\n".join(report_lines))
 
     agency_csv = AgencyConfig.AGENCY_CSV_PATTERN.format(website=website)
     results_df.to_csv(agency_csv, index=False)
-    print(f"\n✅ Saved: {agency_csv} — {len(results_df):,} action records")
+    logger.info(f"Saved: {agency_csv} — {len(results_df):,} action records")
 
     return results_df
 

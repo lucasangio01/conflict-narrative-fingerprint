@@ -1,5 +1,8 @@
 import pandas as pd
 from src.utils.constants import PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("PREPROCESSING")
 
 
 def apply_narrative_filter(website_name):
@@ -11,7 +14,7 @@ def apply_narrative_filter(website_name):
     filtered_df.to_csv(output_file, index=False)
 
     retention = (len(filtered_df) / len(df)) * 100
-    print(f"🎯 Narrative Filter: Kept {len(filtered_df)} chunks ({retention:.2f}% of total).")
+    logger.info(f"Narrative filter: kept {len(filtered_df)} chunks ({retention:.2f}% of total).")
     return filtered_df
 
 

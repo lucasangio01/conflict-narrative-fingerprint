@@ -8,6 +8,9 @@ import matplotlib.patheffects as PathEffects
 import warnings
 from src.utils.constants import NetworksConfig, PlotConfig
 from src.networks.common import build_graph
+from src.utils.logging_config import get_logger
+
+logger = get_logger("NETWORKS")
 
 
 def main(website="rt"):
@@ -26,7 +29,7 @@ def main(website="rt"):
     df_metrics = pd.read_csv(NetworksConfig.METRICS_CSV_PATTERN.format(website=website), index_col='entity')
     df_edges   = pd.read_csv(NetworksConfig.EDGES_CSV_PATTERN.format(website=website))
 
-    print(f"✅ Loaded data for {website} ({theater_name})")
+    logger.info(f"Loaded data for {website} ({theater_name})")
 
     G = build_graph(df_edges)
 
@@ -82,14 +85,14 @@ def main(website="rt"):
 
         plt.tight_layout()
         plt.savefig(output_filename, format='png', dpi=300, bbox_inches='tight')
-        print(f"✅ Saved: {output_filename}")
+        logger.info(f"Saved: {output_filename}")
         plt.show()
         plt.close()
 
-    print(f"\n📊 Generating centrality plot...")
+    logger.info("Generating centrality plot...")
     draw_network(eigen_sizes, f"{website}_centrality.png")
 
-    print(f"\n📊 Generating authority plot...")
+    logger.info("Generating authority plot...")
     draw_network(auth_sizes, f"{website}_authority.png")
 
 

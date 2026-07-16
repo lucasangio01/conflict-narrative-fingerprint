@@ -8,6 +8,9 @@ import warnings
 from tqdm import tqdm
 from src.utils.constants import NamesDicts, Websites, NetworksConfig, PretrainedModels, PreprocessingConfig
 from src.networks.common import build_graph
+from src.utils.logging_config import get_logger
+
+logger = get_logger("NETWORKS")
 
 
 def main(website="rt"):
@@ -16,16 +19,16 @@ def main(website="rt"):
     clean_data_file = PreprocessingConfig.STAGE_FINAL.format(website=website)
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
 
-    print("✨ Initializing RoBERTa Sentiment Transformer...")
+    logger.info("Initializing RoBERTa sentiment transformer...")
     try:
         sentiment_task = pipeline(
             "sentiment-analysis",
             model=PretrainedModels.SENTIMENT_MODEL,
             device=0, batch_size=32,
         )
-        print("   ✅ Running on GPU")
+        logger.info("Running on GPU")
     except Exception as e:
-        print(f"   ⚠️  GPU unavailable ({e}), falling back to CPU")
+        logger.warning(f"GPU unavailable ({e}), falling back to CPU")
         sentiment_task = pipeline(
             "sentiment-analysis",
             model=PretrainedModels.SENTIMENT_MODEL,
@@ -51,7 +54,7 @@ def main(website="rt"):
     theater_name    = Websites.THEATER_IL_PA if is_il_pa else Websites.THEATER_RU_UK
     search_keys     = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
 
-    print(f"🌍 Theater Detected: {theater_name}")
+    logger.info(f"Theater detected: {theater_name}")
 
     def get_entity_match(token, doc):
         chunk_text = next((chunk.text.lower() for chunk in doc.noun_chunks if token.i in range(chunk.start, chunk.end)), None)
@@ -100,7 +103,7 @@ def main(website="rt"):
         return triples
 
     def build_sentiment_cache(texts_list):
-        print("📦 Collecting unique sentences for RoBERTa batch scoring...")
+        logger.info("Collecting unique sentences for RoBERTa batch scoring...")
         unique_sents = set()
         for doc in nlp.pipe(texts_list, batch_size=50, disable=["ner"]):
             for sent in doc.sents:
@@ -110,7 +113,7 @@ def main(website="rt"):
         polarities = {}
         batch_size = 64
 
-        print(f"🤖 Scoring {len(unique_sents)} unique sentences with RoBERTa...")
+        logger.info(f"Scoring {len(unique_sents)} unique sentences with RoBERTa...")
         for i in tqdm(range(0, len(unique_sents), batch_size)):
             batch = unique_sents[i: i + batch_size]
             truncated = [s[:512] for s in batch]
@@ -135,7 +138,7 @@ def main(website="rt"):
 
     all_edges = []
 
-    print(f"🚀 Building Narrative Network for {website}...")
+    logger.info(f"Building narrative network for {website}...")
 
     sentiment_cache = build_sentiment_cache(texts_list)
 
@@ -157,11 +160,11 @@ def main(website="rt"):
                     })
 
     df_edges = pd.DataFrame(all_edges)
-    print(f"   Extracted {len(df_edges)} directed triples ({df_edges['passive'].sum()} from passive constructions)")
+    logger.info(f"Extracted {len(df_edges)} directed triples ({df_edges['passive'].sum()} from passive constructions)")
 
     edges_csv = NetworksConfig.EDGES_CSV_PATTERN.format(website=website)
     df_edges.to_csv(edges_csv, index=False)
-    print(f"✅ Saved raw edges to {edges_csv}")
+    logger.info(f"Saved raw edges to {edges_csv}")
 
     G = build_graph(df_edges)
 
@@ -188,12 +191,14 @@ def main(website="rt"):
     report_df.index.name = 'entity'
     report_df['Label'] = report_df.index.map(active_entities)
 
-    print(f"\n--- NARRATIVE NETWORK REPORT: {website} ---")
-    print(report_df.sort_values(by='Centrality_Pivot', ascending=False).to_string())
+    logger.info(
+        f"--- NARRATIVE NETWORK REPORT: {website} ---\n"
+        + report_df.sort_values(by='Centrality_Pivot', ascending=False).to_string()
+    )
 
     metrics_csv = NetworksConfig.METRICS_CSV_PATTERN.format(website=website)
     report_df.to_csv(metrics_csv)
-    print(f"\n✅ Saved to {metrics_csv}")
+    logger.info(f"Saved to {metrics_csv}")
 
     # Saves active_entities and theater_name so visualize.py needs no manual config
     # beyond `website` -- it never has to re-derive the theater or re-run extraction.
@@ -205,7 +210,7 @@ def main(website="rt"):
             "theater_name":    theater_name,
         }, f)
 
-    print(f"✅ Saved metadata to {meta_pkl}")
+    logger.info(f"Saved metadata to {meta_pkl}")
 
     return report_df
 

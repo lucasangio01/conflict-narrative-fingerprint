@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.inspection import permutation_importance
 from src.utils.constants import ClassifierConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("CLASSIFIER")
 
 
 def main():
@@ -18,8 +21,8 @@ def main():
     X_test = df_results[ablated_cols]
     y_test = df_results['label']
 
-    print(f"Primary model | Test set: {len(X_test)} rows")
-    print(f"Features: {list(X_test.columns)}")
+    logger.info(f"Primary model | Test set: {len(X_test)} rows")
+    logger.info(f"Features: {list(X_test.columns)}")
 
     # Covers all features in the ablated model to give a complete picture of
     # multicollinearity before interpreting permutation importance values.
@@ -47,12 +50,11 @@ def main():
         .sort_values("|r|", ascending=False)
     )
     if not high_corr.empty:
-        print("\nHigh-correlation pairs (|r| > 0.6):")
-        print(high_corr.to_string(index=False))
+        logger.info("High-correlation pairs (|r| > 0.6):\n" + high_corr.to_string(index=False))
     else:
-        print("\nNo feature pair exceeds |r| = 0.6.")
+        logger.info("No feature pair exceeds |r| = 0.6.")
 
-    print("\nCalculating permutation importance (10 repeats)...")
+    logger.info("Calculating permutation importance (10 repeats)...")
     perm_imp   = permutation_importance(
         model, X_test, y_test, n_repeats=10, random_state=42, n_jobs=-1
     )
@@ -81,8 +83,7 @@ def main():
         "std_drop":  perm_imp.importances_std,
     }).sort_values("mean_drop", ascending=False).reset_index(drop=True)
 
-    print("\nPermutation Importance Summary:")
-    print(perm_summary.to_string(index=False))
+    logger.info("Permutation Importance Summary:\n" + perm_summary.to_string(index=False))
 
 
 if __name__ == "__main__":

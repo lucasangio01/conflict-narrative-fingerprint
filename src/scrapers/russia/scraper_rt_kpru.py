@@ -5,6 +5,9 @@ import pandas as pd
 from urllib.parse import urljoin
 import os
 from src.utils.constants import ScraperConfig, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("SCRAPING")
 
 
 class KPRU:
@@ -41,7 +44,7 @@ class KPRU:
         async with aiohttp.ClientSession(headers=self.headers) as session:
             for i in range(15):
                 page_number = 736 - i
-                print("page num: ", page_number)
+                logger.info(f"page num: {page_number}")
                 url = f"https://s02.api.yc.kpcdn.net/content/api/1/pages/get.json?pages.direction=page&pages.number={page_number}&pages.spot=0&pages.target.class=111&pages.target.id=0"
                 data = await self.fetch(session, url)
                 top_childs = data.get("childs", [])

@@ -4,6 +4,9 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import os
 from src.utils.constants import ScraperConfig, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("SCRAPING")
 
 
 class UkPravda:
@@ -54,7 +57,7 @@ class UkPravda:
             urls = [a["href"].replace("\\", "").replace('"', "") for a in soup.find_all("a") if "href" in a.attrs and "eurointegration" not in a["href"]]
             all_urls.extend(urls)
         self.df_titles = pd.DataFrame({"url": all_urls})
-        print(all_urls)
+        logger.info(f"Found URLs: {all_urls}")
 
 
     async def extract_text(self, session):

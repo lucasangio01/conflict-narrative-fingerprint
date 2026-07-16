@@ -7,6 +7,9 @@ import numpy as np
 import warnings
 import logging
 from src.utils.constants import NamesDicts, Lexicons, Axis, Websites, CharactersConfig, PretrainedModels, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("CHARACTERS")
 
 
 def main(website="alquds"):
@@ -17,12 +20,12 @@ def main(website="alquds"):
 
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
 
-    print("✨ Initializing RoBERTa Sentiment Transformer...")
+    logger.info("Initializing RoBERTa sentiment transformer...")
     try:
         sentiment_task = pipeline("sentiment-analysis", model=PretrainedModels.SENTIMENT_MODEL, device=0, batch_size=16)
-        print("   ✅ Running on GPU")
+        logger.info("Running on GPU")
     except Exception as e:
-        print(f"   ⚠️  GPU unavailable ({e}), falling back to CPU")
+        logger.warning(f"GPU unavailable ({e}), falling back to CPU")
         sentiment_task = pipeline("sentiment-analysis", model=PretrainedModels.SENTIMENT_MODEL, device=-1)
 
     is_il_pa = website in Websites.WEBSITES_PALESTINE_ISRAEL
@@ -32,7 +35,7 @@ def main(website="alquds"):
 
     search_keys = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
 
-    print(f"🌍 Theater Detected: {theater_name} — website: {website}")
+    logger.info(f"Theater detected: {theater_name} — website: {website}")
 
     DEHUMAN_KEYWORDS = Lexicons.DEHUMAN_WORDS
     DEHUMAN_CATEGORY = Lexicons.DEHUMAN_CATEGORY
@@ -43,7 +46,7 @@ def main(website="alquds"):
         """
         Constructs a semantic axis as the vector difference between the mean
         of high-pole word vectors and the mean of low-pole word vectors.
-        Prints a sanity check: if high/low cosine similarity is >= 0, the axis
+        Logs a sanity check: if high/low cosine similarity is >= 0, the axis
         may be degenerate (poles not meaningfully opposed in this vector space).
         """
         high_vecs = [nlp(w).vector for w in seeds_dict["high"] if nlp(w).has_vector]
@@ -52,12 +55,14 @@ def main(website="alquds"):
         l = np.mean(low_vecs,  axis=0)
 
         cos_sim = np.dot(h, l) / (np.linalg.norm(h) * np.linalg.norm(l) + 1e-12)
-        polarity = "✅ opposed" if cos_sim < 0 else "⚠️  not well-opposed"
-        print(f"   Axis sanity — high/low cosine similarity: {cos_sim:.3f} {polarity}")
+        if cos_sim < 0:
+            logger.info(f"Axis sanity — high/low cosine similarity: {cos_sim:.3f} (opposed)")
+        else:
+            logger.warning(f"Axis sanity — high/low cosine similarity: {cos_sim:.3f} (not well-opposed)")
 
         return h - l
 
-    print("📐 Building semantic axes...")
+    logger.info("Building semantic axes...")
     comp_axis_vec  = build_axis_vector(axis_seeds["competence"])
     moral_axis_vec = build_axis_vector(axis_seeds["morality"])
 
@@ -149,7 +154,7 @@ def main(website="alquds"):
         return found
 
     def build_sentiment_cache(texts_list):
-        print("📦 Collecting unique sentences for RoBERTa batch scoring...")
+        logger.info("Collecting unique sentences for RoBERTa batch scoring...")
         unique_sents = set()
         for doc in nlp.pipe(texts_list, batch_size=32, disable=["ner"]):
             for sent in doc.sents:
@@ -159,7 +164,7 @@ def main(website="alquds"):
         polarities   = {}
         batch_size   = 64
 
-        print(f"🤖 Scoring {len(unique_sents):,} unique sentences with RoBERTa...")
+        logger.info(f"Scoring {len(unique_sents):,} unique sentences with RoBERTa...")
         for i in tqdm(range(0, len(unique_sents), batch_size)):
             batch = unique_sents[i: i + batch_size]
             try:
@@ -182,7 +187,7 @@ def main(website="alquds"):
     adj_data_rows         = []
     entity_texts_for_mft  = {l: [] for l in target_labels}
 
-    print(f"🚀 Processing {len(texts_list)} articles for {website}...")
+    logger.info(f"Processing {len(texts_list)} articles for {website}...")
 
     # NER disabled — all entity matching is dictionary-based
     for doc in tqdm(nlp.pipe(texts_list, batch_size=32, disable=["ner"]), total=len(texts_list)):
@@ -204,7 +209,7 @@ def main(website="alquds"):
                     "context_sent": sent_text,
                 })
 
-    print("\n📖 Scoring Moral Foundations Theory...")
+    logger.info("Scoring Moral Foundations Theory...")
     mft_results = []
     for label in tqdm(target_labels, desc="MFT"):
         texts = entity_texts_for_mft.get(label, [])
@@ -218,7 +223,7 @@ def main(website="alquds"):
 
     mft_df = pd.DataFrame(mft_results) if mft_results else pd.DataFrame()
 
-    print("\n🔬 Computing character projections...")
+    logger.info("Computing character projections...")
     processed_rows = []
 
     for item in tqdm(adj_data_rows, desc="Projecting adjectives"):
@@ -254,7 +259,7 @@ def main(website="alquds"):
     df_adjectives = pd.DataFrame(processed_rows)
 
     if df_adjectives.empty:
-        print("⚠️  No adjectives extracted. Check entity dictionary and input data.")
+        logger.warning("No adjectives extracted. Check entity dictionary and input data.")
     else:
         entity_counts = df_adjectives['entity'].value_counts()
         valid_entities = entity_counts[entity_counts >= CharactersConfig.MIN_OCCURRENCES].index
@@ -274,23 +279,23 @@ def main(website="alquds"):
         else:
             final_report = label_summary
 
-        print(f"\n{'='*60}")
-        print(f"  CHARACTER ANALYSIS REPORT: {website} ({theater_name})")
-        print(f"{'='*60}")
-        print(final_report.sort_values("dehumanization_rate", ascending=False).to_string())
+        report_lines = [
+            f"{'='*60}",
+            f"  CHARACTER ANALYSIS REPORT: {website} ({theater_name})",
+            f"{'='*60}",
+            final_report.sort_values("dehumanization_rate", ascending=False).to_string(),
+        ]
 
         dehuman_rows = df_adjectives[df_adjectives['dehuman_flag'] == 1]
         if not dehuman_rows.empty:
-            print("\n--- DEHUMANIZATION CATEGORY BREAKDOWN ---")
             cat_breakdown = (
                 dehuman_rows.groupby(['label', 'dehuman_category'])
                 .size()
                 .reset_index(name='count')
                 .sort_values('count', ascending=False)
             )
-            print(cat_breakdown.to_string(index=False))
+            report_lines += ["--- DEHUMANIZATION CATEGORY BREAKDOWN ---", cat_breakdown.to_string(index=False)]
 
-        print("\n--- TOP 10 ADJECTIVES BY LABEL ---")
         top_adjs = (
             df_adjectives.groupby(['label', 'adjective'])
             .size()
@@ -299,11 +304,12 @@ def main(website="alquds"):
             .groupby('label')
             .head(10)
         )
-        print(top_adjs.to_string(index=False))
+        report_lines += ["--- TOP 10 ADJECTIVES BY LABEL ---", top_adjs.to_string(index=False)]
+        logger.info("\n".join(report_lines))
 
     characters_csv = CharactersConfig.CHARACTER_ADJECTIVES_CSV_PATTERN.format(website=website)
     df_adjectives.to_csv(characters_csv, index=False)
-    print(f"\n✅ Saved: {characters_csv} — {len(df_adjectives):,} adjective records")
+    logger.info(f"Saved: {characters_csv} — {len(df_adjectives):,} adjective records")
 
     return df_adjectives
 

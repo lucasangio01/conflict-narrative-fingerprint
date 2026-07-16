@@ -1,10 +1,12 @@
 import pandas as pd
 import re
-import logging
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from src.utils.constants import Months, PretrainedModels, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("PREPROCESSING")
 
 
 class Translation:
@@ -18,7 +20,7 @@ class Translation:
 
         if self.language in model_paths:
             path = model_paths[self.language]
-            logging.info(f"Loading {self.language} model: {path}")
+            logger.info(f"Loading {self.language} model: {path}")
 
             self.tokenizers[self.language] = AutoTokenizer.from_pretrained(path)
             self.models[self.language] = AutoModelForSeq2SeqLM.from_pretrained(path).to(self.device)
@@ -106,13 +108,13 @@ class TranslationPipeline:
     def translate_full_text(self):
         self.df = self.df.dropna(subset=['text']).copy()
         if 'title' in self.df.columns:
-            print(f"🏷️ Translating {len(self.df)} titles...")
+            logger.info(f"Translating {len(self.df)} titles...")
             titles = self.df['title'].fillna("").astype(str).tolist()
             self.df["title_en"] = self.translator.batch_translate(titles)
         translated_articles = []
         texts = self.df['text'].dropna().astype(str).tolist()
 
-        print(f"🌍 Translating {len(texts)} articles via Manual Seq2Seq...")
+        logger.info(f"Translating {len(texts)} articles via manual seq2seq...")
         for article in tqdm(texts):
             sentences = self.split_sentences(article)
             translated_sents = self.translator.batch_translate(sentences)
@@ -123,8 +125,6 @@ class TranslationPipeline:
 
 
 def main(website="alquds"):
-    logging.basicConfig(level=logging.INFO)
-
     cleaner = CleaningPipeline(website)
     df_cleaned = cleaner.clean_date()
 
@@ -132,7 +132,7 @@ def main(website="alquds"):
     df_translated = pipe.translate_full_text()
 
     df_translated.to_csv(PreprocessingConfig.STAGE_ENGLISH.format(website=website), index=False)
-    print("✅ Success! Translation and cleaning complete.")
+    logger.info("Success. Translation and cleaning complete.")
 
 
 if __name__ == "__main__":

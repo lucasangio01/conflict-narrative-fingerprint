@@ -6,6 +6,9 @@ from urllib.parse import urljoin
 import os
 import random
 from src.utils.constants import PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("SCRAPING")
 
 class AlQuds:
     def __init__(self):
@@ -43,7 +46,7 @@ class AlQuds:
                     async with session.get(url, headers=self.headers, timeout=30) as response:
                         if response.status == 429:
                             wait_time = 60 * (attempt + 1)
-                            print(f"⚠️ 429 Blocked. Sleeping for {wait_time}s on {url}")
+                            logger.warning(f"429 blocked. Sleeping for {wait_time}s on {url}")
                             await asyncio.sleep(wait_time)
                             continue
                         
@@ -52,7 +55,7 @@ class AlQuds:
                 
                 except Exception as e:
                     if attempt == retries - 1:
-                        print(f"❌ Failed to fetch {url} after {retries} attempts: {e}")
+                        logger.error(f"Failed to fetch {url} after {retries} attempts: {e}")
                         return None
                     await asyncio.sleep(10)
         return None
@@ -114,9 +117,9 @@ class AlQuds:
             if csv_dir:
                 os.makedirs(csv_dir, exist_ok=True)
             self.df_text.to_csv(self.csv_path, index=False)
-            print(f"✅ Added {len(new_data)} new articles. Total rows: {len(self.df_text)}")
+            logger.info(f"Added {len(new_data)} new articles. Total rows: {len(self.df_text)}")
         else:
-            print("ℹ️ No new articles found.")
+            logger.info("No new articles found.")
 
     async def process_website(self, session):
         await self.extract_data(session)

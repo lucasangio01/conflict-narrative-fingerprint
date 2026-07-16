@@ -18,6 +18,9 @@ import importlib
 import inspect
 
 from src.utils.constants import Websites
+from src.utils.logging_config import get_logger
+
+logger = get_logger("CLI")
 
 
 def _prompt(title, options, zero_label="Back"):
@@ -76,7 +79,7 @@ def _run(module_name, param_prompts=None, func_name="main"):
     for name, prompt_fn in (param_prompts or {}).items():
         value = prompt_fn()
         if value is None:
-            print("Cancelled.")
+            logger.info("Cancelled.")
             return
         kwargs[name] = value
 
@@ -94,16 +97,16 @@ def _run_batch(module_name, func_name="main"):
     """
     websites = _prompt_batch_scope()
     if websites is None:
-        print("Cancelled.")
+        logger.info("Cancelled.")
         return
 
     module = importlib.import_module(module_name)
     for website in websites:
-        print(f"\n=== Running {module_name} for {website} ===")
+        logger.info(f"Running {module_name} for {website}")
         try:
             getattr(module, func_name)(website=website)
         except Exception as e:
-            print(f"❌ {website} failed: {e}")
+            logger.error(f"{website} failed: {e}")
 
 
 def _menu_batch(actions, title="Which action?"):
@@ -134,11 +137,11 @@ _SCRAPERS = [
 
 def _run_all_scrapers():
     for label, module_name in _SCRAPERS:
-        print(f"\n=== Scraping {label} ===")
+        logger.info(f"Scraping {label}")
         try:
             _run(module_name)
         except Exception as e:
-            print(f"❌ {label} failed: {e}")
+            logger.error(f"{label} failed: {e}")
 
 
 def _menu_scraping():
@@ -161,18 +164,18 @@ def _run_all_preprocessing(website):
         "src.preprocessing.detoxify",
     ]
     for stage in stages:
-        print(f"\n=== Running {stage} for {website} ===")
+        logger.info(f"Running {stage} for {website}")
         try:
             importlib.import_module(stage).main(website)
         except Exception as e:
-            print(f"❌ {stage} failed for {website}: {e}")
+            logger.error(f"{stage} failed for {website}: {e}")
             return
 
 
 def _run_all_preprocessing_single():
     website = _prompt_website("Run the full preprocessing pipeline for which website?")
     if website is None:
-        print("Cancelled.")
+        logger.info("Cancelled.")
         return
     _run_all_preprocessing(website)
 
@@ -180,10 +183,10 @@ def _run_all_preprocessing_single():
 def _run_all_preprocessing_batch():
     websites = _prompt_batch_scope("Run the full preprocessing pipeline for which outlets?")
     if websites is None:
-        print("Cancelled.")
+        logger.info("Cancelled.")
         return
     for website in websites:
-        print(f"\n{'#' * 60}\n# {website}\n{'#' * 60}")
+        logger.info(f"{'#' * 60}\n# {website}\n{'#' * 60}")
         _run_all_preprocessing(website)
 
 
@@ -195,7 +198,7 @@ def _run_full_classifier_pipeline():
         "src.classifier.robustness",
     ]
     for stage in stages:
-        print(f"\n=== Running {stage} ===")
+        logger.info(f"Running {stage}")
         importlib.import_module(stage).main()
 
 

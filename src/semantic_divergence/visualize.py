@@ -9,6 +9,9 @@ from src.utils.constants import Websites, SemanticDivergenceConfig
 from src.semantic_divergence.common import (
     get_glove_vector, analyze_glove_neighborhood, analyze_neighborhood,
 )
+from src.utils.logging_config import get_logger
+
+logger = get_logger("SEMANTIC DIVERGENCE")
 
 
 def main(website1="kpru", website2="ukpravda"):
@@ -30,9 +33,9 @@ def main(website1="kpru", website2="ukpravda"):
     m1 = Word2Vec.load(SemanticDivergenceConfig.W2V_MODEL_PATTERN.format(website=website1))
     m2 = Word2Vec.load(SemanticDivergenceConfig.W2V_MODEL_PATTERN.format(website=website2))
 
-    print(f"✅ Loaded all objects for {website1} vs {website2}")
-    print(f"   W2V reliable: {w2v_reliable}")
-    print(f"   Concepts: {concepts}")
+    logger.info(f"Loaded all objects for {website1} vs {website2}")
+    logger.info(f"W2V reliable: {w2v_reliable}")
+    logger.info(f"Concepts: {concepts}")
 
     def plot_polarization(marker_df, label1, label2, top_n=15):
         significant = marker_df[marker_df["is_significant"]]
@@ -53,7 +56,7 @@ def main(website1="kpru", website2="ukpravda"):
     def plot_glove_semantic_map(concept, sents1, sents2, label1, label2, top_k=10):
         res = analyze_glove_neighborhood(concept, sents1, sents2, top_k=top_k)
         if res is None:
-            print(f"   '{concept}' — insufficient GloVe coverage, skipping.")
+            logger.warning(f"'{concept}' — insufficient GloVe coverage, skipping.")
             return
 
         n1 = [w for w in res["excl1"][:top_k//2] + res["shared"][:top_k//2] if get_glove_vector(w) is not None][:top_k]
@@ -102,7 +105,7 @@ def main(website1="kpru", website2="ukpravda"):
 
     def plot_semantic_map(word, m1, m2, R, label1, label2, top_k=10):
         if word not in m1.wv or word not in m2.wv:
-            print(f"   '{word}' not in one or both models — skipping.")
+            logger.warning(f"'{word}' not in one or both models — skipping.")
             return
         metrics = analyze_neighborhood(word, m1, m2, R, top_k=top_k)
         n1 = [w for w, _ in m1.wv.most_similar(word, topn=top_k)]
@@ -137,21 +140,21 @@ def main(website1="kpru", website2="ukpravda"):
         plt.show()
         plt.close()
 
-    print("\n📊 Generating polarized lexicon chart...")
+    logger.info("Generating polarized lexicon chart...")
     plot_polarization(marker_df, website1, website2)
 
     if w2v_reliable:
-        print("\n  Word2Vec semantic maps:")
+        logger.info("Word2Vec semantic maps:")
         for concept in concepts:
             plot_semantic_map(concept, m1, m2, rotation_matrix, website1, website2)
     else:
-        print("\n  ⚠️  Skipping W2V maps — vocabulary below reliability threshold.")
+        logger.warning("Skipping W2V maps — vocabulary below reliability threshold.")
 
-    print("\n  GloVe semantic maps:")
+    logger.info("GloVe semantic maps:")
     for concept in concepts:
         plot_glove_semantic_map(concept, s1, s2, website1, website2)
 
-    print("\n✅ All plots saved.")
+    logger.info("All plots saved.")
 
 
 if __name__ == "__main__":

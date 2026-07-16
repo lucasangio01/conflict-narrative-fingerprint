@@ -13,6 +13,9 @@ from src.utils.constants import Websites, SemanticDivergenceConfig, Preprocessin
 from src.semantic_divergence.common import (
     get_nlp, get_glove_vector, analyze_glove_neighborhood, analyze_neighborhood,
 )
+from src.utils.logging_config import get_logger
+
+logger = get_logger("SEMANTIC DIVERGENCE")
 
 
 def main(website1="kpru", website2="ukpravda"):
@@ -22,8 +25,8 @@ def main(website1="kpru", website2="ukpravda"):
     theater_name = Websites.THEATER_IL_PA if is_il_pa else Websites.THEATER_RU_UK
     concepts     = SemanticDivergenceConfig.CONCEPTS_IL_PA if is_il_pa else SemanticDivergenceConfig.CONCEPTS_RU_UK
 
-    print(f"🌍 Theater Detected: {theater_name}")
-    print(f"🎯 Tracking Concepts: {', '.join(concepts)}")
+    logger.info(f"Theater detected: {theater_name}")
+    logger.info(f"Tracking concepts: {', '.join(concepts)}")
 
     def preprocess_corpus(df_subset):
         """
@@ -38,7 +41,7 @@ def main(website1="kpru", website2="ukpravda"):
         flat_tokens, sentences = [], []
         texts = df_subset['text'].dropna().astype(str).tolist()
 
-        print("   ✨ Running spaCy pipeline with sentence segmentation...")
+        logger.info("Running spaCy pipeline with sentence segmentation...")
         for doc in tqdm(nlp.pipe(texts, batch_size=32, disable=["ner"]), total=len(texts)):
             for sent in doc.sents:
                 sent_tokens = [
@@ -77,7 +80,7 @@ def main(website1="kpru", website2="ukpravda"):
             sents2 = [s for s, k in zip(sents2, keep) if k]
             tokens2 = [t for s in sents2 for t in s]
 
-        print(f"   Balanced token counts: {len(tokens1):,} vs {len(tokens2):,}")
+        logger.info(f"Balanced token counts: {len(tokens1):,} vs {len(tokens2):,}")
         return tokens1, sents1, tokens2, sents2
 
     def calculate_log_odds_zscore(tokens1, tokens2, prior=0.1, threshold=1.96):
@@ -177,7 +180,7 @@ def main(website1="kpru", website2="ukpravda"):
         stability_results = {c: [] for c in concepts}
 
         for i in range(iterations):
-            print(f"   Stability iteration {i+1}/{iterations}...")
+            logger.info(f"Stability iteration {i+1}/{iterations}...")
             idx1 = np.random.choice(len(sents1), int(len(sents1) * subsample), replace=False)
             idx2 = np.random.choice(len(sents2), int(len(sents2) * subsample), replace=False)
             sub1 = [sents1[j] for j in idx1]
@@ -239,7 +242,7 @@ def main(website1="kpru", website2="ukpravda"):
 
     def plot_semantic_map(word, m1, m2, R, label1, label2, top_k=10):
         if word not in m1.wv or word not in m2.wv:
-            print(f"   '{word}' not in one or both models — skipping.")
+            logger.warning(f"'{word}' not in one or both models — skipping.")
             return
 
         metrics = analyze_neighborhood(word, m1, m2, R, top_k=top_k)
@@ -287,7 +290,7 @@ def main(website1="kpru", website2="ukpravda"):
         """
         res = analyze_glove_neighborhood(concept, sents1, sents2, top_k=top_k)
         if res is None:
-            print(f"   '{concept}' — insufficient GloVe coverage, skipping.")
+            logger.warning(f"'{concept}' — insufficient GloVe coverage, skipping.")
             return
 
         n1 = [w for w in res["excl1"][:top_k//2] + res["shared"][:top_k//2] if get_glove_vector(w) is not None][:top_k]
@@ -329,82 +332,88 @@ def main(website1="kpru", website2="ukpravda"):
         plt.show()
         plt.close()
 
-    print("\n🚀 Loading data...")
+    logger.info("Loading data...")
     df1 = pd.read_csv(PreprocessingConfig.STAGE_FINAL.format(website=website1))
     df2 = pd.read_csv(PreprocessingConfig.STAGE_FINAL.format(website=website2))
-    print(f"   {website1}: {len(df1):,} articles | {website2}: {len(df2):,} articles")
+    logger.info(f"{website1}: {len(df1):,} articles | {website2}: {len(df2):,} articles")
 
-    print("\n📝 Preprocessing corpora (sentence-aware)...")
-    print(f"   {website1}:")
+    logger.info("Preprocessing corpora (sentence-aware)...")
+    logger.info(f"{website1}:")
     t1, s1 = preprocess_corpus(df1)
-    print(f"   {website2}:")
+    logger.info(f"{website2}:")
     t2, s2 = preprocess_corpus(df2)
-    print(f"   Raw token counts: {len(t1):,} ({website1}) vs {len(t2):,} ({website2})")
+    logger.info(f"Raw token counts: {len(t1):,} ({website1}) vs {len(t2):,} ({website2})")
 
-    print("\n⚖️  Balancing corpora by token count...")
+    logger.info("Balancing corpora by token count...")
     t1, s1, t2, s2 = balance_by_tokens(t1, s1, t2, s2)
     counts1, counts2 = Counter(t1), Counter(t2)
 
-    print("\n🤖 Training Word2Vec models...")
+    logger.info("Training Word2Vec models...")
     m1 = Word2Vec(sentences=s1, vector_size=100, window=5, min_count=SemanticDivergenceConfig.W2V_MIN_COUNT, workers=4, seed=42)
     m2 = Word2Vec(sentences=s2, vector_size=100, window=5, min_count=SemanticDivergenceConfig.W2V_MIN_COUNT, workers=4, seed=42)
 
     vocab1, vocab2 = len(m1.wv.index_to_key), len(m2.wv.index_to_key)
-    print(f"   Vocab sizes: {vocab1:,} ({website1}) | {vocab2:,} ({website2})")
+    logger.info(f"Vocab sizes: {vocab1:,} ({website1}) | {vocab2:,} ({website2})")
 
     w2v_reliable = vocab1 >= SemanticDivergenceConfig.W2V_VOCAB_THRESHOLD and vocab2 >= SemanticDivergenceConfig.W2V_VOCAB_THRESHOLD
     if not w2v_reliable:
-        print(f"\n   ⚠️  WARNING: One or both Word2Vec vocabularies are below {SemanticDivergenceConfig.W2V_VOCAB_THRESHOLD:,} types.")
-        print(f"   W2V embeddings are likely degenerate on this corpus size.")
-        print(f"   Neighborhood and drift results will be reported but should NOT be interpreted.")
-        print(f"   Treat GloVe results as the primary analysis for this corpus pair.")
+        logger.warning(
+            f"One or both Word2Vec vocabularies are below {SemanticDivergenceConfig.W2V_VOCAB_THRESHOLD:,} types. "
+            "W2V embeddings are likely degenerate on this corpus size. Neighborhood and drift results will be "
+            "reported but should NOT be interpreted. Treat GloVe results as the primary analysis for this corpus pair."
+        )
 
-    print("\n🔗 Aligning embedding spaces (Procrustes)...")
+    logger.info("Aligning embedding spaces (Procrustes)...")
     drift_df, rotation_matrix = align_and_drift(m1, m2)
 
     if w2v_reliable:
-        print("\n🔁 Running stability bootstrap tests...")
+        logger.info("Running stability bootstrap tests...")
         stability_stats = run_stability_test(s1, s2, concepts, iterations=5)
     else:
-        print("\n⏭️  Skipping stability bootstrap — W2V vocabulary too small for reliable results.")
+        logger.warning("Skipping stability bootstrap — W2V vocabulary too small for reliable results.")
         stability_stats = {}
 
-    print("\n⚖️  Computing log-odds z-scores...")
+    logger.info("Computing log-odds z-scores...")
     marker_df = calculate_log_odds_zscore(t1, t2)
     significant = marker_df[marker_df["is_significant"]]
 
-    print(f"\n--- STATISTICALLY SIGNIFICANT ANCHORS: {website1.upper()} ---")
-    print(significant.head(10)[["word", "z_score", "count_site1", "count_site2"]].to_string(index=False))
+    logger.info(
+        f"--- STATISTICALLY SIGNIFICANT ANCHORS: {website1.upper()} ---\n"
+        + significant.head(10)[["word", "z_score", "count_site1", "count_site2"]].to_string(index=False)
+    )
+    logger.info(
+        f"--- STATISTICALLY SIGNIFICANT ANCHORS: {website2.upper()} ---\n"
+        + significant.tail(10)[["word", "z_score", "count_site1", "count_site2"]].to_string(index=False)
+    )
 
-    print(f"\n--- STATISTICALLY SIGNIFICANT ANCHORS: {website2.upper()} ---")
-    print(significant.tail(10)[["word", "z_score", "count_site1", "count_site2"]].to_string(index=False))
-
-    print("\n📐 Computing narrative entropy over shared distinctive vocabulary...")
+    logger.info("Computing narrative entropy over shared distinctive vocabulary...")
     h1, nh1, h2, nh2, shared_lex = calculate_narrative_entropy(t1, t2)
-    print(f"\n--- NARRATIVE ENTROPY (shared vocabulary of {len(shared_lex):,} words) ---")
-    print(f"{'Site':<15} | {'H (raw)':<10} | {'H (normalized)'}")
-    print("-" * 45)
-    print(f"{website1.upper():<15} | {h1:<10} | {nh1}")
-    print(f"{website2.upper():<15} | {h2:<10} | {nh2}")
-    print("Higher normalized entropy → more dispersed use of distinctive vocabulary")
+    entropy_lines = [
+        f"--- NARRATIVE ENTROPY (shared vocabulary of {len(shared_lex):,} words) ---",
+        f"{'Site':<15} | {'H (raw)':<10} | {'H (normalized)'}",
+        "-" * 45,
+        f"{website1.upper():<15} | {h1:<10} | {nh1}",
+        f"{website2.upper():<15} | {h2:<10} | {nh2}",
+        "Higher normalized entropy → more dispersed use of distinctive vocabulary",
+    ]
+    logger.info("\n".join(entropy_lines))
 
-    print(f"\n--- SEMANTIC DRIFT: TOP 15 MOST DRIFTED WORDS ---")
-    print(drift_df.head(15).to_string(index=False))
+    logger.info(f"--- SEMANTIC DRIFT: TOP 15 MOST DRIFTED WORDS ---\n" + drift_df.head(15).to_string(index=False))
 
-    print(f"\n--- COMPREHENSIVE NARRATIVE DIVERGENCE REPORT (Word2Vec) ---")
+    divergence_lines = ["--- COMPREHENSIVE NARRATIVE DIVERGENCE REPORT (Word2Vec) ---"]
     if not w2v_reliable:
-        print(f"    ⚠️  UNRELIABLE — vocab sizes ({vocab1}, {vocab2}) below threshold ({SemanticDivergenceConfig.W2V_VOCAB_THRESHOLD})")
-        print(f"    Results shown for completeness only. Use GloVe section below.\n")
+        divergence_lines.append(f"UNRELIABLE — vocab sizes ({vocab1}, {vocab2}) below threshold ({SemanticDivergenceConfig.W2V_VOCAB_THRESHOLD})")
+        divergence_lines.append("Results shown for completeness only. Use GloVe section below.")
 
-    print(f"{'CONCEPT':<12} | {'FREQ1':<6} | {'FREQ2':<6} | {'JACCARD μ':<10} | {'STD':<7} | {'NULL μ':<8} | {'P-VAL':<7} | SIG")
-    print("-" * 85)
+    divergence_lines.append(f"{'CONCEPT':<12} | {'FREQ1':<6} | {'FREQ2':<6} | {'JACCARD μ':<10} | {'STD':<7} | {'NULL μ':<8} | {'P-VAL':<7} | SIG")
+    divergence_lines.append("-" * 85)
 
     for c in concepts:
         if c not in stability_stats:
             if w2v_reliable:
-                print(f"{c.upper():<12} | {'N/A':}")
+                divergence_lines.append(f"{c.upper():<12} | {'N/A':}")
             else:
-                print(f"{c.upper():<12} | {counts1.get(c,0):<6} | {counts2.get(c,0):<6} | {'skipped (unreliable)'}")
+                divergence_lines.append(f"{c.upper():<12} | {counts1.get(c,0):<6} | {counts2.get(c,0):<6} | {'skipped (unreliable)'}")
             continue
 
         f1 = counts1.get(c, 0)
@@ -415,56 +424,63 @@ def main(website1="kpru", website2="ukpravda"):
             null_scores = calculate_null_baseline(s1, s2, c, iterations=50)
             null_mean   = round(np.mean(null_scores), 4) if null_scores else 0.0
             p_value     = round(np.mean([s >= mean_j for s in null_scores]), 3) if null_scores else 1.0
-            is_sig      = "⭐" if p_value < 0.05 else ""
+            is_sig      = "significant" if p_value < 0.05 else ""
         else:
             null_mean, p_value, is_sig = "N/A", "N/A", ""
 
-        print(f"{c.upper():<12} | {f1:<6} | {f2:<6} | {mean_j:<10} | {std_j:<7} | {null_mean:<8} | {p_value:<7} | {is_sig}")
+        divergence_lines.append(f"{c.upper():<12} | {f1:<6} | {f2:<6} | {mean_j:<10} | {std_j:<7} | {null_mean:<8} | {p_value:<7} | {is_sig}")
+    logger.info("\n".join(divergence_lines))
 
-    print("\n--- NEIGHBORHOOD ANALYSIS PER CONCEPT (Word2Vec) ---")
+    neighborhood_lines = ["--- NEIGHBORHOOD ANALYSIS PER CONCEPT (Word2Vec) ---"]
     if not w2v_reliable:
-        print("    ⚠️  UNRELIABLE — shown for reference only\n")
+        neighborhood_lines.append("UNRELIABLE — shown for reference only")
     for c in concepts:
         res = analyze_neighborhood(c, m1, m2, rotation_matrix)
         if res:
-            print(f"\n  {c.upper()} | Jaccard: {res['jaccard']} | Centroid drift: {res['c_drift']}")
-            print(f"    {website1} only: {res['excl1'][:8]}")
-            print(f"    {website2} only: {res['excl2'][:8]}")
-            print(f"    Shared:         {res['shared'][:8]}")
+            neighborhood_lines.append(f"{c.upper()} | Jaccard: {res['jaccard']} | Centroid drift: {res['c_drift']}")
+            neighborhood_lines.append(f"    {website1} only: {res['excl1'][:8]}")
+            neighborhood_lines.append(f"    {website2} only: {res['excl2'][:8]}")
+            neighborhood_lines.append(f"    Shared:         {res['shared'][:8]}")
+    logger.info("\n".join(neighborhood_lines))
 
-    print("\n" + "=" * 70)
-    print("  GLOVE ANALYSIS (pretrained, stable — Common Crawl 840B tokens)")
-    print("  No alignment needed — both corpora share the same vector space.")
-    print("=" * 70)
+    logger.info(
+        f"{'='*70}\n"
+        "  GLOVE ANALYSIS (pretrained, stable — Common Crawl 840B tokens)\n"
+        "  No alignment needed — both corpora share the same vector space.\n"
+        f"{'='*70}"
+    )
 
-    print(f"\n--- GLOVE NEIGHBORHOOD DIVERGENCE PER CONCEPT ---")
-    print(f"{'CONCEPT':<12} | {'JACCARD':<9} | {'CENTROID DRIFT'}")
-    print("-" * 40)
-
+    glove_div_lines = [
+        "--- GLOVE NEIGHBORHOOD DIVERGENCE PER CONCEPT ---",
+        f"{'CONCEPT':<12} | {'JACCARD':<9} | {'CENTROID DRIFT'}",
+        "-" * 40,
+    ]
     glove_results = {}
     for c in concepts:
         res = analyze_glove_neighborhood(c, s1, s2, top_k=20)
         if res:
             glove_results[c] = res
-            print(f"{c.upper():<12} | {res['jaccard']:<9} | {res['c_drift']}")
+            glove_div_lines.append(f"{c.upper():<12} | {res['jaccard']:<9} | {res['c_drift']}")
         else:
-            print(f"{c.upper():<12} | {'N/A':<9} | N/A")
+            glove_div_lines.append(f"{c.upper():<12} | {'N/A':<9} | N/A")
+    logger.info("\n".join(glove_div_lines))
 
-    print(f"\n--- GLOVE NEIGHBORHOOD DETAILS PER CONCEPT ---")
+    glove_detail_lines = ["--- GLOVE NEIGHBORHOOD DETAILS PER CONCEPT ---"]
     for c, res in glove_results.items():
-        print(f"\n  {c.upper()} | Jaccard: {res['jaccard']} | Centroid drift: {res['c_drift']}")
-        print(f"    {website1} only: {res['excl1'][:8]}")
-        print(f"    {website2} only: {res['excl2'][:8]}")
-        print(f"    Shared:         {res['shared'][:8]}")
-        print(f"    ── Centroid semantic region ──")
-        print(f"    {website1} centroid → {res['nn_c1']}")
-        print(f"    {website2} centroid → {res['nn_c2']}")
+        glove_detail_lines.append(f"{c.upper()} | Jaccard: {res['jaccard']} | Centroid drift: {res['c_drift']}")
+        glove_detail_lines.append(f"    {website1} only: {res['excl1'][:8]}")
+        glove_detail_lines.append(f"    {website2} only: {res['excl2'][:8]}")
+        glove_detail_lines.append(f"    Shared:         {res['shared'][:8]}")
+        glove_detail_lines.append("    Centroid semantic region:")
+        glove_detail_lines.append(f"    {website1} centroid → {res['nn_c1']}")
+        glove_detail_lines.append(f"    {website2} centroid → {res['nn_c2']}")
+    logger.info("\n".join(glove_detail_lines))
 
-    print(f"\n--- METHOD COMPARISON: Word2Vec vs GloVe ---")
+    comparison_lines = ["--- METHOD COMPARISON: Word2Vec vs GloVe ---"]
     if not w2v_reliable:
-        print(f"    ⚠️  W2V results unreliable (vocab: {vocab1}/{vocab2}). GloVe is primary analysis.")
-    print(f"{'CONCEPT':<12} | {'W2V Jaccard':<13} | {'W2V C-drift':<13} | {'GLoVe Jaccard':<15} | {'GLoVe C-drift'}")
-    print("-" * 75)
+        comparison_lines.append(f"W2V results unreliable (vocab: {vocab1}/{vocab2}). GloVe is primary analysis.")
+    comparison_lines.append(f"{'CONCEPT':<12} | {'W2V Jaccard':<13} | {'W2V C-drift':<13} | {'GLoVe Jaccard':<15} | {'GLoVe C-drift'}")
+    comparison_lines.append("-" * 75)
     for c in concepts:
         w2v_res   = analyze_neighborhood(c, m1, m2, rotation_matrix)
         glove_res = glove_results.get(c)
@@ -472,26 +488,25 @@ def main(website1="kpru", website2="ukpravda"):
         w2v_cd    = f"{w2v_res['c_drift']:.4f}"   if w2v_res   else "N/A"
         glv_j     = f"{glove_res['jaccard']:.4f}" if glove_res else "N/A"
         glv_cd    = f"{glove_res['c_drift']:.4f}" if glove_res else "N/A"
-        print(f"{c.upper():<12} | {w2v_j:<13} | {w2v_cd:<13} | {glv_j:<15} | {glv_cd}")
+        comparison_lines.append(f"{c.upper():<12} | {w2v_j:<13} | {w2v_cd:<13} | {glv_j:<15} | {glv_cd}")
+    logger.info("\n".join(comparison_lines))
 
-    print("""
-Interpretation guide:
+    logger.info("""Interpretation guide:
   High W2V / Low GloVe  → outlet-specific framing not captured by pretrained vectors
                            (corpus-idiosyncratic usage, possible domain-specific sense)
   High GloVe / Low W2V  → divergence in general associations, W2V unstable on this word
                            (likely corpus size issue — treat W2V result with caution)
-  Both high             → robust divergence confirmed by both methods ✅
-  Both low              → concept used similarly across both outlets
-""")
+  Both high             → robust divergence confirmed by both methods
+  Both low              → concept used similarly across both outlets""")
 
-    print("\n📊 Generating visualizations...")
+    logger.info("Generating visualizations...")
     plot_polarization(marker_df, website1, website2)
 
-    print("\n  Word2Vec semantic maps:")
+    logger.info("Word2Vec semantic maps:")
     for concept in concepts:
         plot_semantic_map(concept, m1, m2, rotation_matrix, website1, website2)
 
-    print("\n  GloVe semantic maps:")
+    logger.info("GloVe semantic maps:")
     for concept in concepts:
         plot_glove_semantic_map(concept, s1, s2, website1, website2)
 
@@ -542,15 +557,17 @@ Interpretation guide:
             "w2v_reliable": w2v_reliable,
         }, f)
 
-    print(f"\n✅ Saved:")
-    print(f"   {logodds_csv}")
-    print(f"   {website1}_vs_{website2}_w2v_drift.csv")
-    print(f"   {website1}_vs_{website2}_glove_divergence.csv")
-    print(f"   {sentences_pkl}")
-    print(f"   {w2v_model1}  |  {w2v_model2}")
-    print(f"   {rotation_npy}")
-    print(f"   {glove_results_pkl}")
-    print(f"   {meta_pkl}")
+    logger.info(
+        "Saved:\n"
+        f"   {logodds_csv}\n"
+        f"   {website1}_vs_{website2}_w2v_drift.csv\n"
+        f"   {website1}_vs_{website2}_glove_divergence.csv\n"
+        f"   {sentences_pkl}\n"
+        f"   {w2v_model1}  |  {w2v_model2}\n"
+        f"   {rotation_npy}\n"
+        f"   {glove_results_pkl}\n"
+        f"   {meta_pkl}"
+    )
 
 
 if __name__ == "__main__":

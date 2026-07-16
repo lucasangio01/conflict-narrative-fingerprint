@@ -4,15 +4,18 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import warnings
 from src.utils.constants import EdaConfig, Websites, PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("EDA")
 
 
 def safe_load(path):
     try:
         df = pd.read_csv(path, low_memory=False)
-        print(f"    ✅ Loaded: {path} ({len(df)} rows)")
+        logger.info(f"Loaded: {path} ({len(df)} rows)")
         return df
     except FileNotFoundError:
-        print(f"    ❌ Not found: {path}")
+        logger.warning(f"Not found: {path}")
         return None
 
 
@@ -31,7 +34,7 @@ def collect_stats(outlet_dict, side_map, theater_name):
     final_dfs = {}
 
     for name, prefix in outlet_dict.items():
-        print(f"\n  [{name}]")
+        logger.info(f"[{name}]")
 
         df_original = safe_load(PreprocessingConfig.STAGE_ORIGINAL.format(website=prefix))
         df_chunked = safe_load(PreprocessingConfig.STAGE_CHUNKED.format(website=prefix))
@@ -107,37 +110,35 @@ def collect_stats(outlet_dict, side_map, theater_name):
 
 
 def print_summary(stats_df, theater_name):
-    print(f"\n{'='*75}")
-    print(f"  {theater_name.upper()} — CORPUS STATISTICS")
-    print(f"{'='*75}")
+    logger.info(f"{'='*75}\n  {theater_name.upper()} — CORPUS STATISTICS\n{'='*75}")
 
-    print("\n--- PIPELINE FUNNEL (per outlet) ---")
     cols1 = ["Outlet", "Side", "Scraped Articles", "Total Chunks", "Filtered Chunks", "Final Chunks", "Retention after filter (%)", "Retention final (%)"]
     available1 = [c for c in cols1 if c in stats_df.columns]
-    print(stats_df[available1].to_string(index=False))
+    logger.info("--- PIPELINE FUNNEL (per outlet) ---\n" + stats_df[available1].to_string(index=False))
 
-    print("\n--- TEXT QUALITY AND COVERAGE (per outlet) ---")
     cols2 = ["Outlet", "Side", "Date Range", "Avg Chunk Length (chars)", "Total Words", "Avg Toxicity", "Avg Relevance Score"]
     available2 = [c for c in cols2 if c in stats_df.columns]
-    print(stats_df[available2].to_string(index=False))
+    logger.info("--- TEXT QUALITY AND COVERAGE (per outlet) ---\n" + stats_df[available2].to_string(index=False))
 
-    print("\n--- THEATER TOTALS ---")
+    lines = ["--- THEATER TOTALS ---"]
     for col in ["Scraped Articles", "Total Chunks", "Filtered Chunks", "Final Chunks", "Total Words"]:
         if col in stats_df.columns:
             total = stats_df[col].apply(lambda x: x if isinstance(x, int) else 0).sum()
-            print(f"  {col:<30}: {total:,}")
+            lines.append(f"  {col:<30}: {total:,}")
+    logger.info("\n".join(lines))
 
-    print("\n--- BY SIDE ---")
+    lines = ["--- BY SIDE ---"]
     total_final = stats_df["Final Chunks"].apply(lambda x: x if isinstance(x, int) else 0).sum()
     for side in stats_df["Side"].unique():
         side_total = stats_df.loc[stats_df["Side"] == side, "Final Chunks"].apply(lambda x: x if isinstance(x, int) else 0).sum()
         pct = side_total / total_final * 100 if total_final > 0 else 0
-        print(f"  {side:<20}: {side_total:,} final chunks ({pct:.1f}%)")
+        lines.append(f"  {side:<20}: {side_total:,} final chunks ({pct:.1f}%)")
+    logger.info("\n".join(lines))
 
 
 def plot_overview(combined_df, stats_df, theater_name, side_colors):
     if combined_df is None or len(stats_df) == 0:
-        print(f"  No data available for {theater_name}")
+        logger.warning(f"No data available for {theater_name}")
         return
 
     fig = plt.figure(figsize=(16, 12))
@@ -217,18 +218,18 @@ def plot_overview(combined_df, stats_df, theater_name, side_colors):
     fname = (f"corpus_overview_{theater_name.replace(' ','_').replace('/','_')}.png")
     plt.savefig(fname, dpi=150, bbox_inches="tight", facecolor="white")
     plt.show()
-    print(f"  📊 Saved: {fname}")
+    logger.info(f"Saved: {fname}")
 
 
 def main():
     warnings.filterwarnings('ignore')
 
-    print("🚀 Computing corpus statistics...\n")
+    logger.info("Computing corpus statistics...")
 
-    print(f"📂 {Websites.THEATER_RU_UK} Theater:")
+    logger.info(f"{Websites.THEATER_RU_UK} Theater:")
     ru_uk_stats, ru_uk_df = collect_stats(EdaConfig.RU_UK_OUTLETS, EdaConfig.SIDE_MAP_RU_UK, Websites.THEATER_RU_UK)
 
-    print(f"\n📂 {Websites.THEATER_IL_PA} Theater:")
+    logger.info(f"{Websites.THEATER_IL_PA} Theater:")
     il_pa_stats, il_pa_df = collect_stats(EdaConfig.IL_PA_OUTLETS, EdaConfig.SIDE_MAP_IL_PA, Websites.THEATER_IL_PA)
 
     if ru_uk_stats is not None and len(ru_uk_stats) > 0:
@@ -237,22 +238,21 @@ def main():
     if il_pa_stats is not None and len(il_pa_stats) > 0:
         print_summary(il_pa_stats, Websites.THEATER_IL_PA)
 
-    print(f"\n{'='*75}")
-    print(f"  COMBINED CORPUS — ALL THEATERS")
-    print(f"{'='*75}")
     all_stats = pd.concat([s for s in [ru_uk_stats, il_pa_stats] if s is not None], ignore_index=True)
+    lines = [f"{'='*75}\n  COMBINED CORPUS — ALL THEATERS\n{'='*75}"]
     for col in ["Scraped Articles", "Total Chunks", "Filtered Chunks", "Final Chunks", "Total Words"]:
         if col in all_stats.columns:
             total = all_stats[col].apply(lambda x: x if isinstance(x, int) else 0).sum()
-            print(f"  {col:<30}: {total:,}")
+            lines.append(f"  {col:<30}: {total:,}")
+    logger.info("\n".join(lines))
 
-    print("\n📊 Generating plots...")
+    logger.info("Generating plots...")
     if ru_uk_df is not None:
         plot_overview(ru_uk_df, ru_uk_stats, Websites.THEATER_RU_UK, EdaConfig.RU_UK_COLORS)
     if il_pa_df is not None:
         plot_overview(il_pa_df, il_pa_stats, Websites.THEATER_IL_PA, EdaConfig.IL_PA_COLORS)
 
-    print("\n✅ Done.")
+    logger.info("Done.")
 
 
 if __name__ == "__main__":

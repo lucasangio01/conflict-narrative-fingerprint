@@ -6,6 +6,9 @@ import shap
 from sklearn.metrics import RocCurveDisplay, PrecisionRecallDisplay
 from sklearn.inspection import PartialDependenceDisplay
 from src.utils.constants import ClassifierConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("CLASSIFIER")
 
 
 def main():
@@ -20,8 +23,8 @@ def main():
     X_test = df_results[ablated_cols]
     y_test = df_results['label']
 
-    print(f"Primary model | Test set: {len(X_test)} rows | {X_test.shape[1]} features")
-    print(f"Features: {ablated_cols}")
+    logger.info(f"Primary model | Test set: {len(X_test)} rows | {X_test.shape[1]} features")
+    logger.info(f"Features: {ablated_cols}")
 
     fig, ax = plt.subplots(1, 2, figsize=(16, 6))
 
@@ -35,7 +38,7 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    print("Calculating SHAP values (this may take a moment)...")
+    logger.info("Calculating SHAP values (this may take a moment)...")
     explainer   = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_test, check_additivity=False)
 

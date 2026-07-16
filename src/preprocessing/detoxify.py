@@ -2,6 +2,9 @@ from detoxify import Detoxify
 import torch
 import pandas as pd
 from src.utils.constants import PreprocessingConfig
+from src.utils.logging_config import get_logger
+
+logger = get_logger("PREPROCESSING")
 
 
 def run_toxicity_scoring(website_name):
@@ -12,7 +15,7 @@ def run_toxicity_scoring(website_name):
     batch_size = PreprocessingConfig.TOXICITY_BATCH_SIZE
     tox_scores = []
 
-    print(f"🧪 Scoring toxicity for {len(texts)} relevant chunks...")
+    logger.info(f"Scoring toxicity for {len(texts)} relevant chunks...")
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
         preds = detector.predict(batch)["toxicity"]
@@ -27,7 +30,7 @@ def run_toxicity_scoring(website_name):
 
     final_output = PreprocessingConfig.STAGE_FINAL.format(website=website_name)
     df.to_csv(final_output, index=False)
-    print(f"🏁 PIPELINE COMPLETE! Final file: {final_output}")
+    logger.info(f"Pipeline complete. Final file: {final_output}")
 
 
 def main(website="alquds"):
