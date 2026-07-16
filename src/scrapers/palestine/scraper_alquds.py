@@ -5,12 +5,13 @@ import pandas as pd
 from urllib.parse import urljoin
 import os
 import random
+from src.utils.constants import PreprocessingConfig
 
 class AlQuds:
     def __init__(self):
         self.base_url = "https://www.alquds.com/"
         self.semaphore = asyncio.Semaphore(2)
-        self.csv_path = "../../../data/pal_isr/alquds_original.csv"
+        self.csv_path = PreprocessingConfig.STAGE_ORIGINAL.format(website="alquds")
         
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -109,7 +110,9 @@ class AlQuds:
             cols = ['id'] + [c for c in self.df_text.columns if c != 'id']
             self.df_text = self.df_text[cols]
             
-            os.makedirs(os.path.dirname(self.csv_path), exist_ok=True)
+            csv_dir = os.path.dirname(self.csv_path)
+            if csv_dir:
+                os.makedirs(csv_dir, exist_ok=True)
             self.df_text.to_csv(self.csv_path, index=False)
             print(f"✅ Added {len(new_data)} new articles. Total rows: {len(self.df_text)}")
         else:

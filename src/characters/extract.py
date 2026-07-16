@@ -6,14 +6,14 @@ from emfdscore.scoring import score_docs
 import numpy as np
 import warnings
 import logging
-from src.utils.constants import NamesDicts, Lexicons, Axis, Websites, CharactersConfig, PretrainedModels
-
-logging.getLogger("transformers").setLevel(logging.ERROR)
-warnings.filterwarnings('ignore')
+from src.utils.constants import NamesDicts, Lexicons, Axis, Websites, CharactersConfig, PretrainedModels, PreprocessingConfig
 
 
 def main(website="alquds"):
-    clean_data_file = f"{website}_final.csv"
+    logging.getLogger("transformers").setLevel(logging.ERROR)
+    warnings.filterwarnings('ignore')
+
+    clean_data_file = PreprocessingConfig.STAGE_FINAL.format(website=website)
 
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
 
@@ -27,7 +27,7 @@ def main(website="alquds"):
 
     is_il_pa = website in Websites.WEBSITES_PALESTINE_ISRAEL
     active_entities = NamesDicts.IZ_PA_BASE if is_il_pa else NamesDicts.RU_UK_BASE
-    theater_name    = "Israel-Palestine" if is_il_pa else "Russia-Ukraine"
+    theater_name    = Websites.THEATER_IL_PA if is_il_pa else Websites.THEATER_RU_UK
     target_labels   = list(set(active_entities.values()))
 
     search_keys = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
@@ -301,8 +301,9 @@ def main(website="alquds"):
         )
         print(top_adjs.to_string(index=False))
 
-    df_adjectives.to_csv(f"{website}_character_adjectives.csv", index=False)
-    print(f"\n✅ Saved: {website}_character_adjectives.csv — {len(df_adjectives):,} adjective records")
+    characters_csv = CharactersConfig.CHARACTER_ADJECTIVES_CSV_PATTERN.format(website=website)
+    df_adjectives.to_csv(characters_csv, index=False)
+    print(f"\n✅ Saved: {characters_csv} — {len(df_adjectives):,} adjective records")
 
     return df_adjectives
 

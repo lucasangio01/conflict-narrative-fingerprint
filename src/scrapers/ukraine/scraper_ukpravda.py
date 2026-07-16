@@ -3,6 +3,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
+from src.utils.constants import ScraperConfig, PreprocessingConfig
 
 
 class UkPravda:
@@ -20,21 +21,14 @@ class UkPravda:
         self.max_pages = 5
 
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Connection": "keep-alive",
+            **ScraperConfig.BROWSER_HEADERS_BASE,
             "Referer": self.base_url,
             "Origin": self.base_url,
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-User": "?1",
-            "Sec-Fetch-Dest": "document",
             "X-Requested-With": "XMLHttpRequest",
         }
 
         # CSV path and existing titles
-        self.csv_path = "data/preprocessing/ukr_rus/ukpravda_original.csv"
+        self.csv_path = PreprocessingConfig.STAGE_ORIGINAL.format(website="ukpravda")
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:

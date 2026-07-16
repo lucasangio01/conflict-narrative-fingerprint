@@ -1,16 +1,15 @@
 import pandas as pd
 import spacy
 import warnings
-import numpy as np
 from tqdm import tqdm
 from transformers import pipeline
-from src.utils.constants import NamesDicts, Verbs, Websites, AgencyConfig, PretrainedModels
-
-warnings.filterwarnings('ignore')
+from src.utils.constants import NamesDicts, Verbs, Websites, AgencyConfig, PretrainedModels, PreprocessingConfig
 
 
 def main(website="alquds"):
-    clean_data_file = f"{website}_final.csv"
+    warnings.filterwarnings('ignore')
+
+    clean_data_file = PreprocessingConfig.STAGE_FINAL.format(website=website)
 
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
 
@@ -24,7 +23,7 @@ def main(website="alquds"):
 
     is_il_pa = website in Websites.WEBSITES_PALESTINE_ISRAEL
     active_entities = NamesDicts.IZ_PA_BASE if is_il_pa else NamesDicts.RU_UK_BASE
-    theater_name    = "Israel-Palestine" if is_il_pa else "Russia-Ukraine"
+    theater_name    = Websites.THEATER_IL_PA if is_il_pa else Websites.THEATER_RU_UK
 
     search_keys = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
 
@@ -258,8 +257,9 @@ def main(website="alquds"):
         print("\n--- [LEVEL 4] TOP VIOLENT VERB USAGE BY LABEL ---")
         print(violent_verb_report.head(20).to_string(index=False))
 
-    results_df.to_csv(f"{website}_agency_actions.csv", index=False)
-    print(f"\n✅ Saved: {website}_agency_actions.csv — {len(results_df):,} action records")
+    agency_csv = AgencyConfig.AGENCY_CSV_PATTERN.format(website=website)
+    results_df.to_csv(agency_csv, index=False)
+    print(f"\n✅ Saved: {agency_csv} — {len(results_df):,} action records")
 
     return results_df
 

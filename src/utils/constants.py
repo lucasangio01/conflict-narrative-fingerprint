@@ -5,6 +5,9 @@ class Websites:
     WEBSITES_UKRAINE_RUSSIA = ["kpru", "ukpravda", "rt", "liganet"]
     WEBSITES_PALESTINE_ISRAEL = ["jpost", "alquds", "ynet", "ynet_global"]
 
+    THEATER_RU_UK = "Russia-Ukraine"
+    THEATER_IL_PA = "Israel-Palestine"
+
     DISPLAY_NAMES = {
         "kpru":        "Komsomolskaya Pravda",
         "ukpravda":    "Ukrainska Pravda",
@@ -14,6 +17,23 @@ class Websites:
         "jpost":       "Jerusalem Post",
         "ynet":        "Ynet",
         "ynet_global": "Ynet Global",
+    }
+
+
+class ScraperConfig:
+    """
+    Shared config for src/scrapers/**/*.py. Referer/Origin are filled in
+    per-scraper from that site's own base_url, since they must match it.
+    """
+    BROWSER_HEADERS_BASE = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Connection": "keep-alive",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-User": "?1",
+        "Sec-Fetch-Dest": "document",
     }
 
 
@@ -45,47 +65,9 @@ class PretrainedModels:
 
     @staticmethod
     @functools.lru_cache(maxsize=1)
-    def hebrew_to_english():
-        from transformers import pipeline
-        return pipeline(task="translation_he_to_en", model=PretrainedModels.TRANSLATION_MODEL_PATHS["hebrew"])
-
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def russian_to_english():
-        from transformers import pipeline
-        return pipeline(task="translation_ru_to_en", model=PretrainedModels.TRANSLATION_MODEL_PATHS["russian"])
-
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
     def sentence_embedder():
         from sentence_transformers import SentenceTransformer
         return SentenceTransformer(model_name_or_path=PretrainedModels.SENTENCE_EMBEDDING_MODEL)
-
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def toxicity_detector():
-        from detoxify import Detoxify
-        return Detoxify(model_type="original")
-
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def emotion_classifier():
-        from transformers import pipeline
-        return pipeline(task="text-classification", model="j-hartmann/emotion-english-distilroberta-base", return_all_scores=True)
-
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def coref_lingmess():
-        import torch
-        from fastcoref import LingMessCoref
-        return LingMessCoref(device="cuda" if torch.cuda.is_available() else "cpu")
-
-    @staticmethod
-    @functools.lru_cache(maxsize=1)
-    def coref_fcoref():
-        import torch
-        from fastcoref import FCoref
-        return FCoref(device="cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Axis:
@@ -259,6 +241,10 @@ class AgencyConfig:
     AGENCY_THRESHOLD = 0.50
     VIOLENCE_THRESHOLD = 0.05
 
+    # Written by extract.py, read by plot_violence.py and (via THEATER_CONFIG
+    # below) plot_bars.py -- one pattern shared by all three.
+    AGENCY_CSV_PATTERN = "{website}_agency_actions.csv"
+
     LABEL_COLORS = {
         # Russia-Ukraine theater
         "RU_POLITICAL":   "#c0392b",   # red
@@ -296,7 +282,6 @@ class AgencyConfig:
             # analyzed separately in §4.3.1 and would duplicate the entity-level
             # signal here.
             "labels": ["RU_POLITICAL", "UKR_POLITICAL", "WEST_ACTORS", "INTL_ACTORS", "CIVILIANS"],
-            "agency_csv_pattern": "{outlet}_agency_actions.csv",
         },
         "il_pa": {
             "outlets": ["alquds", "jpost", "ynet", "ynet_global"],
@@ -308,7 +293,6 @@ class AgencyConfig:
                 "ynet_global": "#5dade2",
             },
             "labels": ["ISR_POLITICAL", "PAL_POLITICAL", "PAL_ORG", "PAL_RESISTANCE", "INTL_ACTORS", "CIVILIANS"],
-            "agency_csv_pattern": "{outlet}_agency_actions.csv",
         },
     }
 
@@ -319,6 +303,9 @@ class CharactersConfig:
     MIN_OCCURRENCES = 1   # minimum adjective rows per entity label to include in report
     # Set to 1 so low-frequency labels (CIVILIANS, SETTLERS) are not silently dropped.
     # Raise to 3-5 to exclude statistically thin labels from the summary.
+
+    # Written by extract.py, read by plot_adjectives.py.
+    CHARACTER_ADJECTIVES_CSV_PATTERN = "{website}_character_adjectives.csv"
 
     TOP_N = 8
     MORALITY_VMIN = -2.5
@@ -410,6 +397,10 @@ class CoOccurrenceConfig:
 
     MIN_COUNT = 3   # minimum sentence co-occurrences to include a pair in output
 
+    # Written by extract.py, read by visualize.py.
+    PAIRS_CSV_PATTERN  = "{website}_cooccurrence_pairs.csv"
+    LABELS_CSV_PATTERN = "{website}_cooccurrence_labels.csv"
+
     # Force-annotate entity pairs of narrative interest on the scatter plot,
     # curated per outlet from a prior read of each outlet's PMI/Jaccard results.
     HIGHLIGHT_PAIRS_UKPRAVDA = [
@@ -480,6 +471,11 @@ class NetworksConfig:
 
     MEANINGFUL_PREPS = {"at", "against", "into", "on", "upon", "toward", "towards", "over"}
 
+    # Written by extract.py, read by visualize.py.
+    EDGES_CSV_PATTERN   = "{website}_edges.csv"
+    METRICS_CSV_PATTERN = "{website}_network_metrics.csv"
+    META_PKL_PATTERN    = "{website}_network_meta.pkl"
+
 
 class SemanticDivergenceConfig:
     """Shared config for src/semantic_divergence/{compute,visualize}.py."""
@@ -495,6 +491,15 @@ class SemanticDivergenceConfig:
     W2V_MIN_COUNT = 3
     W2V_VOCAB_THRESHOLD = 2000   # below this, W2V geometry is unreliable
 
+    # Artifacts written by compute.py, read back by visualize.py so plots can be
+    # regenerated without re-running preprocessing/training/bootstrap.
+    META_PKL_PATTERN          = "{website1}_vs_{website2}_meta.pkl"
+    SENTENCES_PKL_PATTERN     = "{website1}_vs_{website2}_sentences.pkl"
+    GLOVE_RESULTS_PKL_PATTERN = "{website1}_vs_{website2}_glove_results.pkl"
+    LOGODDS_CSV_PATTERN       = "{website1}_vs_{website2}_logodds.csv"
+    ROTATION_NPY_PATTERN      = "{website1}_vs_{website2}_rotation.npy"
+    W2V_MODEL_PATTERN         = "{website}_w2v.model"
+
 
 class PreprocessingConfig:
     """Shared config for src/preprocessing/*.py."""
@@ -508,9 +513,39 @@ class PreprocessingConfig:
     # before chunking so it doesn't get split across chunks.
     STOP_MARKER = "The use of site materials is allowed only"
 
+    # Reused by every sentence-splitting call site (chunking, coreferencing,
+    # translation) so all three stay in lock-step if the heuristic ever changes.
+    SENTENCE_SPLIT_REGEX = r'(?<=[.!?])\s+'
+
+    # Pipeline stage filenames -- the numbered convention (1_original -> ... ->
+    # 6_filtered -> final) is reused across every preprocessing script, eda.py,
+    # and every analysis extract.py/merge_data.py that reads the final stage.
+    STAGE_ORIGINAL = "1_{website}_original.csv"
+    STAGE_ENGLISH  = "2_{website}_english.csv"
+    STAGE_RESOLVED = "3_{website}_resolved.csv"
+    STAGE_CHUNKED  = "4_{website}_chunked.csv"
+    STAGE_EMBEDDED = "5_{website}_embedded.csv"
+    STAGE_FILTERED = "6_{website}_filtered.csv"
+    STAGE_FINAL    = "{website}_final.csv"
+
+
+class PlotConfig:
+    """
+    Shared matplotlib rcParams fragment, reused by every src/*/plot_*.py and
+    */visualize.py script. Per-chart label/tick sizes vary and are merged on
+    top of this base locally in each script, e.g.:
+        plt.rcParams.update({**PlotConfig.RCPARAMS_SERIF_BASE, "axes.labelsize": 14, ...})
+    """
+    RCPARAMS_SERIF_BASE = {
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "DejaVu Serif"],
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    }
+
 
 class EdaConfig:
-    """Shared config for src/eda.py."""
+    """Shared config for src/preprocessing/eda.py."""
 
     RU_UK_OUTLETS = {"KP.RU": "kpru", "RT": "rt", "Ukrainska Pravda": "ukpravda", "Liga.net": "liganet"}
     IL_PA_OUTLETS = {"Jerusalem Post": "jpost", "Ynet": "ynet", "Ynet Global": "ynet_global", "Al-Quds": "alquds"}

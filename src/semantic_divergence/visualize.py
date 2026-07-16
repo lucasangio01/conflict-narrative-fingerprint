@@ -5,30 +5,30 @@ import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull
 from sklearn.decomposition import PCA
 from gensim.models import Word2Vec
-from src.utils.constants import Websites
+from src.utils.constants import Websites, SemanticDivergenceConfig
 from src.semantic_divergence.common import (
     get_glove_vector, analyze_glove_neighborhood, analyze_neighborhood,
 )
 
 
 def main(website1="kpru", website2="ukpravda"):
-    with open(f"{website1}_vs_{website2}_meta.pkl", "rb") as f:
+    with open(SemanticDivergenceConfig.META_PKL_PATTERN.format(website1=website1, website2=website2), "rb") as f:
         meta = pickle.load(f)
         concepts     = meta["concepts"]
         w2v_reliable = meta["w2v_reliable"]
 
-    with open(f"{website1}_vs_{website2}_sentences.pkl", "rb") as f:
+    with open(SemanticDivergenceConfig.SENTENCES_PKL_PATTERN.format(website1=website1, website2=website2), "rb") as f:
         sents = pickle.load(f)
         s1, s2 = sents["s1"], sents["s2"]
 
-    with open(f"{website1}_vs_{website2}_glove_results.pkl", "rb") as f:
+    with open(SemanticDivergenceConfig.GLOVE_RESULTS_PKL_PATTERN.format(website1=website1, website2=website2), "rb") as f:
         glove_results = pickle.load(f)
 
-    marker_df       = pd.read_csv(f"{website1}_vs_{website2}_logodds.csv")
-    rotation_matrix = np.load(f"{website1}_vs_{website2}_rotation.npy")
+    marker_df       = pd.read_csv(SemanticDivergenceConfig.LOGODDS_CSV_PATTERN.format(website1=website1, website2=website2))
+    rotation_matrix = np.load(SemanticDivergenceConfig.ROTATION_NPY_PATTERN.format(website1=website1, website2=website2))
 
-    m1 = Word2Vec.load(f"{website1}_w2v.model")
-    m2 = Word2Vec.load(f"{website2}_w2v.model")
+    m1 = Word2Vec.load(SemanticDivergenceConfig.W2V_MODEL_PATTERN.format(website=website1))
+    m2 = Word2Vec.load(SemanticDivergenceConfig.W2V_MODEL_PATTERN.format(website=website2))
 
     print(f"✅ Loaded all objects for {website1} vs {website2}")
     print(f"   W2V reliable: {w2v_reliable}")

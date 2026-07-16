@@ -7,12 +7,12 @@ import warnings
 from tqdm import tqdm
 from transformers import pipeline
 from emfdscore.scoring import score_docs
-from src.utils.constants import NamesDicts, Verbs, Lexicons, Axis, ClassifierConfig, PretrainedModels
-
-warnings.filterwarnings('ignore')
+from src.utils.constants import NamesDicts, Verbs, Lexicons, Axis, ClassifierConfig, PretrainedModels, PreprocessingConfig
 
 
 def main():
+    warnings.filterwarnings('ignore')
+
     print("Loading models...")
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
     sentiment_task = pipeline(
@@ -152,7 +152,7 @@ def main():
     for website, label in ClassifierConfig.SOURCE_LABELS.items():
         print(f"\n[{website}] label={label}")
         try:
-            df = pd.read_csv(f"{website}_final.csv").dropna(subset=["text"])
+            df = pd.read_csv(PreprocessingConfig.STAGE_FINAL.format(website=website)).dropna(subset=["text"])
         except Exception:
             continue
 

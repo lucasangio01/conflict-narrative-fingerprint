@@ -6,14 +6,14 @@ import networkx as nx
 from networkx.algorithms.link_analysis.hits_alg import hits
 import warnings
 from tqdm import tqdm
-from src.utils.constants import NamesDicts, Websites, NetworksConfig, PretrainedModels
+from src.utils.constants import NamesDicts, Websites, NetworksConfig, PretrainedModels, PreprocessingConfig
 from src.networks.common import build_graph
-
-warnings.filterwarnings('ignore')
 
 
 def main(website="rt"):
-    clean_data_file = f"{website}_final.csv"
+    warnings.filterwarnings('ignore')
+
+    clean_data_file = PreprocessingConfig.STAGE_FINAL.format(website=website)
     nlp = spacy.load(PretrainedModels.SPACY_MODEL_LG)
 
     print("✨ Initializing RoBERTa Sentiment Transformer...")
@@ -48,7 +48,7 @@ def main(website="rt"):
 
     is_il_pa        = website in Websites.WEBSITES_PALESTINE_ISRAEL
     active_entities = NamesDicts.IZ_PA_BASE if is_il_pa else NamesDicts.RU_UK_BASE
-    theater_name    = "Israel-Palestine" if is_il_pa else "Russia-Ukraine"
+    theater_name    = Websites.THEATER_IL_PA if is_il_pa else Websites.THEATER_RU_UK
     search_keys     = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
 
     print(f"🌍 Theater Detected: {theater_name}")
@@ -159,8 +159,9 @@ def main(website="rt"):
     df_edges = pd.DataFrame(all_edges)
     print(f"   Extracted {len(df_edges)} directed triples ({df_edges['passive'].sum()} from passive constructions)")
 
-    df_edges.to_csv(f"{website}_edges.csv", index=False)
-    print(f"✅ Saved raw edges to {website}_edges.csv")
+    edges_csv = NetworksConfig.EDGES_CSV_PATTERN.format(website=website)
+    df_edges.to_csv(edges_csv, index=False)
+    print(f"✅ Saved raw edges to {edges_csv}")
 
     G = build_graph(df_edges)
 
@@ -190,19 +191,21 @@ def main(website="rt"):
     print(f"\n--- NARRATIVE NETWORK REPORT: {website} ---")
     print(report_df.sort_values(by='Centrality_Pivot', ascending=False).to_string())
 
-    report_df.to_csv(f"{website}_network_metrics.csv")
-    print(f"\n✅ Saved to {website}_network_metrics.csv")
+    metrics_csv = NetworksConfig.METRICS_CSV_PATTERN.format(website=website)
+    report_df.to_csv(metrics_csv)
+    print(f"\n✅ Saved to {metrics_csv}")
 
     # Saves active_entities and theater_name so visualize.py needs no manual config
     # beyond `website` -- it never has to re-derive the theater or re-run extraction.
-    with open(f"{website}_network_meta.pkl", "wb") as f:
+    meta_pkl = NetworksConfig.META_PKL_PATTERN.format(website=website)
+    with open(meta_pkl, "wb") as f:
         pickle.dump({
             "website":         website,
             "active_entities": active_entities,
             "theater_name":    theater_name,
         }, f)
 
-    print(f"✅ Saved metadata to {website}_network_meta.pkl")
+    print(f"✅ Saved metadata to {meta_pkl}")
 
     return report_df
 

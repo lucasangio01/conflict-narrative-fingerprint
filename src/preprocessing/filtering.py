@@ -3,11 +3,11 @@ from src.utils.constants import PreprocessingConfig
 
 
 def apply_narrative_filter(website_name):
-    df = pd.read_csv(f"5_{website_name}_embedded.csv")
+    df = pd.read_csv(PreprocessingConfig.STAGE_EMBEDDED.format(website=website_name))
     threshold = PreprocessingConfig.FILTER_THRESHOLD
     filtered_df = df[(df["filter1"] > threshold) | (df["filter2"] > threshold) | (df["filter3"] > threshold)].copy()
 
-    output_file = f"6_{website_name}_filtered.csv"
+    output_file = PreprocessingConfig.STAGE_FILTERED.format(website=website_name)
     filtered_df.to_csv(output_file, index=False)
 
     retention = (len(filtered_df) / len(df)) * 100

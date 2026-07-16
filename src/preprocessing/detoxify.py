@@ -6,7 +6,7 @@ from src.utils.constants import PreprocessingConfig
 
 def run_toxicity_scoring(website_name):
     detector = Detoxify(model_type='original', device='cuda')
-    df = pd.read_csv(f"6_{website_name}_filtered.csv")
+    df = pd.read_csv(PreprocessingConfig.STAGE_FILTERED.format(website=website_name))
 
     texts = df["text"].astype(str).tolist()
     batch_size = PreprocessingConfig.TOXICITY_BATCH_SIZE
@@ -25,7 +25,7 @@ def run_toxicity_scoring(website_name):
     desired_order = ["id", "title", "date", "filter1", "filter2", "filter3", "toxicity", "text", "embedding"]
     df = df[desired_order].sort_values(by="date", ascending=False)
 
-    final_output = f"{website_name}_final.csv"
+    final_output = PreprocessingConfig.STAGE_FINAL.format(website=website_name)
     df.to_csv(final_output, index=False)
     print(f"🏁 PIPELINE COMPLETE! Final file: {final_output}")
 

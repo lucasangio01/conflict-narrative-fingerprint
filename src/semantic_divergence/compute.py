@@ -9,7 +9,7 @@ from scipy.linalg import orthogonal_procrustes
 from scipy.spatial import ConvexHull
 from sklearn.decomposition import PCA
 from tqdm import tqdm
-from src.utils.constants import Websites, SemanticDivergenceConfig
+from src.utils.constants import Websites, SemanticDivergenceConfig, PreprocessingConfig
 from src.semantic_divergence.common import (
     get_nlp, get_glove_vector, analyze_glove_neighborhood, analyze_neighborhood,
 )
@@ -19,7 +19,7 @@ def main(website1="kpru", website2="ukpravda"):
     nlp = get_nlp()
 
     is_il_pa     = website1 in Websites.WEBSITES_PALESTINE_ISRAEL or website2 in Websites.WEBSITES_PALESTINE_ISRAEL
-    theater_name = "Israel-Palestine" if is_il_pa else "Russia-Ukraine"
+    theater_name = Websites.THEATER_IL_PA if is_il_pa else Websites.THEATER_RU_UK
     concepts     = SemanticDivergenceConfig.CONCEPTS_IL_PA if is_il_pa else SemanticDivergenceConfig.CONCEPTS_RU_UK
 
     print(f"🌍 Theater Detected: {theater_name}")
@@ -330,8 +330,8 @@ def main(website1="kpru", website2="ukpravda"):
         plt.close()
 
     print("\n🚀 Loading data...")
-    df1 = pd.read_csv(f"{website1}_final.csv")
-    df2 = pd.read_csv(f"{website2}_final.csv")
+    df1 = pd.read_csv(PreprocessingConfig.STAGE_FINAL.format(website=website1))
+    df2 = pd.read_csv(PreprocessingConfig.STAGE_FINAL.format(website=website2))
     print(f"   {website1}: {len(df1):,} articles | {website2}: {len(df2):,} articles")
 
     print("\n📝 Preprocessing corpora (sentence-aware)...")
@@ -495,7 +495,8 @@ Interpretation guide:
     for concept in concepts:
         plot_glove_semantic_map(concept, s1, s2, website1, website2)
 
-    marker_df.to_csv(f"{website1}_vs_{website2}_logodds.csv", index=False)
+    logodds_csv = SemanticDivergenceConfig.LOGODDS_CSV_PATTERN.format(website1=website1, website2=website2)
+    marker_df.to_csv(logodds_csv, index=False)
     drift_df.to_csv(f"{website1}_vs_{website2}_w2v_drift.csv", index=False)
 
     if glove_results:
@@ -516,18 +517,24 @@ Interpretation guide:
     # Sentence lists, models, rotation matrix and glove_results are saved so
     # src/semantic_divergence/visualize.py can regenerate all plots without
     # re-running the (expensive) preprocessing/training/bootstrap steps above.
-    with open(f"{website1}_vs_{website2}_sentences.pkl", "wb") as f:
+    sentences_pkl = SemanticDivergenceConfig.SENTENCES_PKL_PATTERN.format(website1=website1, website2=website2)
+    with open(sentences_pkl, "wb") as f:
         pickle.dump({"s1": s1, "s2": s2}, f)
 
-    m1.save(f"{website1}_w2v.model")
-    m2.save(f"{website2}_w2v.model")
+    w2v_model1 = SemanticDivergenceConfig.W2V_MODEL_PATTERN.format(website=website1)
+    w2v_model2 = SemanticDivergenceConfig.W2V_MODEL_PATTERN.format(website=website2)
+    m1.save(w2v_model1)
+    m2.save(w2v_model2)
 
-    np.save(f"{website1}_vs_{website2}_rotation.npy", rotation_matrix)
+    rotation_npy = SemanticDivergenceConfig.ROTATION_NPY_PATTERN.format(website1=website1, website2=website2)
+    np.save(rotation_npy, rotation_matrix)
 
-    with open(f"{website1}_vs_{website2}_glove_results.pkl", "wb") as f:
+    glove_results_pkl = SemanticDivergenceConfig.GLOVE_RESULTS_PKL_PATTERN.format(website1=website1, website2=website2)
+    with open(glove_results_pkl, "wb") as f:
         pickle.dump(glove_results, f)
 
-    with open(f"{website1}_vs_{website2}_meta.pkl", "wb") as f:
+    meta_pkl = SemanticDivergenceConfig.META_PKL_PATTERN.format(website1=website1, website2=website2)
+    with open(meta_pkl, "wb") as f:
         pickle.dump({
             "website1":     website1,
             "website2":     website2,
@@ -536,14 +543,14 @@ Interpretation guide:
         }, f)
 
     print(f"\n✅ Saved:")
-    print(f"   {website1}_vs_{website2}_logodds.csv")
+    print(f"   {logodds_csv}")
     print(f"   {website1}_vs_{website2}_w2v_drift.csv")
     print(f"   {website1}_vs_{website2}_glove_divergence.csv")
-    print(f"   {website1}_vs_{website2}_sentences.pkl")
-    print(f"   {website1}_w2v.model  |  {website2}_w2v.model")
-    print(f"   {website1}_vs_{website2}_rotation.npy")
-    print(f"   {website1}_vs_{website2}_glove_results.pkl")
-    print(f"   {website1}_vs_{website2}_meta.pkl")
+    print(f"   {sentences_pkl}")
+    print(f"   {w2v_model1}  |  {w2v_model2}")
+    print(f"   {rotation_npy}")
+    print(f"   {glove_results_pkl}")
+    print(f"   {meta_pkl}")
 
 
 if __name__ == "__main__":

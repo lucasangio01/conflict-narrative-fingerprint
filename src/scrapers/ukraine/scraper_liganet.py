@@ -3,27 +3,17 @@ import aiohttp
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
+from src.utils.constants import ScraperConfig, PreprocessingConfig
 
 
 class LigaNET:
     def __init__(self):
         self.base_url = "https://www.liga.net/en/opinion"
         self.semaphore = asyncio.Semaphore(3)
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Connection": "keep-alive",
-            "Referer": self.base_url,
-            "Origin": self.base_url,
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-User": "?1",
-            "Sec-Fetch-Dest": "document",
-        }
+        self.headers = {**ScraperConfig.BROWSER_HEADERS_BASE, "Referer": self.base_url, "Origin": self.base_url}
 
         # CSV path and existing titles
-        self.csv_path = "../../../data/ukraine/liganet_original.csv"
+        self.csv_path = PreprocessingConfig.STAGE_ORIGINAL.format(website="liganet")
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:

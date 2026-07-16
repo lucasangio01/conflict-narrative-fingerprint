@@ -4,9 +4,7 @@ import logging
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from src.utils.constants import Months, PretrainedModels
-
-logging.basicConfig(level=logging.INFO)
+from src.utils.constants import Months, PretrainedModels, PreprocessingConfig
 
 
 class Translation:
@@ -62,7 +60,7 @@ class CleaningPipeline:
             self.original_language = "russian"
         else:
             self.original_language = "english"
-        self.csv_path_original = f"1_{self.website}_original.csv"
+        self.csv_path_original = PreprocessingConfig.STAGE_ORIGINAL.format(website=self.website)
 
     def clean_date(self):
             self.df = pd.read_csv(self.csv_path_original)
@@ -102,7 +100,7 @@ class TranslationPipeline:
 
     @staticmethod
     def split_sentences(text):
-        return re.split(r'(?<=[.!?])\s+', str(text).strip())
+        return re.split(PreprocessingConfig.SENTENCE_SPLIT_REGEX, str(text).strip())
 
 
     def translate_full_text(self):
@@ -125,13 +123,15 @@ class TranslationPipeline:
 
 
 def main(website="alquds"):
+    logging.basicConfig(level=logging.INFO)
+
     cleaner = CleaningPipeline(website)
     df_cleaned = cleaner.clean_date()
 
     pipe = TranslationPipeline(df=df_cleaned, language=cleaner.original_language)
     df_translated = pipe.translate_full_text()
 
-    df_translated.to_csv(f"2_{website}_english.csv", index=False)
+    df_translated.to_csv(PreprocessingConfig.STAGE_ENGLISH.format(website=website), index=False)
     print("✅ Success! Translation and cleaning complete.")
 
 

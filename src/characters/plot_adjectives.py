@@ -5,29 +5,18 @@ import numpy as np
 import matplotlib.gridspec as gridspec
 import warnings
 import math
-from src.utils.constants import Websites, NamesDicts, CharactersConfig
+from src.utils.constants import Websites, NamesDicts, CharactersConfig, PlotConfig
 
-warnings.filterwarnings('ignore')
 
-plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["Times New Roman", "DejaVu Serif"],
-    "axes.labelsize": 14,
-    "xtick.labelsize": 12,
-    "ytick.labelsize": 12,
-    "pdf.fonttype": 42,
-    "ps.fonttype": 42,
-})
-
-MORALITY_CMAP = mcolors.LinearSegmentedColormap.from_list("morality", CharactersConfig.MORALITY_CMAP_COLORS)
-
-def morality_to_color(val):
+def morality_to_color(val, cmap):
     norm = (val - CharactersConfig.MORALITY_VMIN) / (CharactersConfig.MORALITY_VMAX - CharactersConfig.MORALITY_VMIN)
-    return MORALITY_CMAP(np.clip(norm, 0, 1))
+    return cmap(np.clip(norm, 0, 1))
 
 def plot_adjective_bars(website, target_labels, characters_csv=None, top_n=8):
     if characters_csv is None:
-        characters_csv = f"{website}_character_adjectives.csv"
+        characters_csv = CharactersConfig.CHARACTER_ADJECTIVES_CSV_PATTERN.format(website=website)
+
+    morality_cmap = mcolors.LinearSegmentedColormap.from_list("morality", CharactersConfig.MORALITY_CMAP_COLORS)
 
     df = pd.read_csv(characters_csv)
     n_panels = len(target_labels)
@@ -69,7 +58,7 @@ def plot_adjective_bars(website, target_labels, characters_csv=None, top_n=8):
             ax.set_visible(False)
             continue
 
-        colors = [morality_to_color(m) for m in top['morality']]
+        colors = [morality_to_color(m, morality_cmap) for m in top['morality']]
         bars = ax.barh(top['adjective'], top['competence'], color=colors, edgecolor='white', linewidth=0.5, height=0.65)
 
         for bar, cnt in zip(bars, top['count']):
@@ -87,7 +76,7 @@ def plot_adjective_bars(website, target_labels, characters_csv=None, top_n=8):
         ax.grid(axis='x', ls='--', alpha=0.3, zorder=0)
         ax.spines[['top', 'right']].set_visible(False)
 
-    sm = plt.cm.ScalarMappable(cmap=MORALITY_CMAP, norm=mcolors.Normalize(vmin=CharactersConfig.MORALITY_VMIN, vmax=CharactersConfig.MORALITY_VMAX))
+    sm = plt.cm.ScalarMappable(cmap=morality_cmap, norm=mcolors.Normalize(vmin=CharactersConfig.MORALITY_VMIN, vmax=CharactersConfig.MORALITY_VMAX))
     sm.set_array([])
     # Positioning the colorbar so it doesn't overlap the centered 3rd plot
     cbar = fig.colorbar(sm, ax=axes_list, orientation='vertical', fraction=0.02, pad=0.08, shrink=0.7)
@@ -99,6 +88,14 @@ def plot_adjective_bars(website, target_labels, characters_csv=None, top_n=8):
 
 
 def main(website="ynet_global", target_labels=None):
+    warnings.filterwarnings('ignore')
+    plt.rcParams.update({
+        **PlotConfig.RCPARAMS_SERIF_BASE,
+        "axes.labelsize": 14,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+    })
+
     if target_labels is None:
         is_il_pa = website in Websites.WEBSITES_PALESTINE_ISRAEL
         active_entities = NamesDicts.IZ_PA_BASE if is_il_pa else NamesDicts.RU_UK_BASE

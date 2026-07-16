@@ -3,8 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import warnings
-from src.utils.constants import EdaConfig
-warnings.filterwarnings('ignore')
+from src.utils.constants import EdaConfig, Websites, PreprocessingConfig
 
 
 def safe_load(path):
@@ -34,11 +33,11 @@ def collect_stats(outlet_dict, side_map, theater_name):
     for name, prefix in outlet_dict.items():
         print(f"\n  [{name}]")
 
-        df_original = safe_load(f"1_{prefix}_original.csv")
-        df_chunked = safe_load(f"4_{prefix}_chunked.csv")
-        df_filtered = safe_load(f"6_{prefix}_filtered.csv")
-        df_english = safe_load(f"2_{prefix}_english.csv")
-        df_final = safe_load(f"{prefix}_final.csv")
+        df_original = safe_load(PreprocessingConfig.STAGE_ORIGINAL.format(website=prefix))
+        df_chunked = safe_load(PreprocessingConfig.STAGE_CHUNKED.format(website=prefix))
+        df_filtered = safe_load(PreprocessingConfig.STAGE_FILTERED.format(website=prefix))
+        df_english = safe_load(PreprocessingConfig.STAGE_ENGLISH.format(website=prefix))
+        df_final = safe_load(PreprocessingConfig.STAGE_FINAL.format(website=prefix))
 
         n_raw_articles = len(df_original) if df_original is not None else np.nan
 
@@ -222,19 +221,21 @@ def plot_overview(combined_df, stats_df, theater_name, side_colors):
 
 
 def main():
+    warnings.filterwarnings('ignore')
+
     print("🚀 Computing corpus statistics...\n")
 
-    print("📂 Russia-Ukraine Theater:")
-    ru_uk_stats, ru_uk_df = collect_stats(EdaConfig.RU_UK_OUTLETS, EdaConfig.SIDE_MAP_RU_UK, "Russia-Ukraine")
+    print(f"📂 {Websites.THEATER_RU_UK} Theater:")
+    ru_uk_stats, ru_uk_df = collect_stats(EdaConfig.RU_UK_OUTLETS, EdaConfig.SIDE_MAP_RU_UK, Websites.THEATER_RU_UK)
 
-    print("\n📂 Israel-Palestine Theater:")
-    il_pa_stats, il_pa_df = collect_stats(EdaConfig.IL_PA_OUTLETS, EdaConfig.SIDE_MAP_IL_PA, "Israel-Palestine")
+    print(f"\n📂 {Websites.THEATER_IL_PA} Theater:")
+    il_pa_stats, il_pa_df = collect_stats(EdaConfig.IL_PA_OUTLETS, EdaConfig.SIDE_MAP_IL_PA, Websites.THEATER_IL_PA)
 
     if ru_uk_stats is not None and len(ru_uk_stats) > 0:
-        print_summary(ru_uk_stats, "Russia-Ukraine")
+        print_summary(ru_uk_stats, Websites.THEATER_RU_UK)
 
     if il_pa_stats is not None and len(il_pa_stats) > 0:
-        print_summary(il_pa_stats, "Israel-Palestine")
+        print_summary(il_pa_stats, Websites.THEATER_IL_PA)
 
     print(f"\n{'='*75}")
     print(f"  COMBINED CORPUS — ALL THEATERS")
@@ -247,9 +248,9 @@ def main():
 
     print("\n📊 Generating plots...")
     if ru_uk_df is not None:
-        plot_overview(ru_uk_df, ru_uk_stats, "Russia-Ukraine", EdaConfig.RU_UK_COLORS)
+        plot_overview(ru_uk_df, ru_uk_stats, Websites.THEATER_RU_UK, EdaConfig.RU_UK_COLORS)
     if il_pa_df is not None:
-        plot_overview(il_pa_df, il_pa_stats, "Israel-Palestine", EdaConfig.IL_PA_COLORS)
+        plot_overview(il_pa_df, il_pa_stats, Websites.THEATER_IL_PA, EdaConfig.IL_PA_COLORS)
 
     print("\n✅ Done.")
 

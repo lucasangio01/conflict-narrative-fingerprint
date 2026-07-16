@@ -4,9 +4,18 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.parse import urljoin
 import os
+from src.utils.constants import ScraperConfig, PreprocessingConfig
 
 
 class Russia:
+    """
+    Generic selector-driven scraper covering "vt", "kpru", and "ria" -- none of
+    which are part of the tracked outlet set in Websites (vt/ria were early
+    exploratory targets; the maintained kpru scraper is KPRU in
+    scraper_rt_kpru.py). "rt" is NOT supported here: RT is a tracked outlet
+    (see data/preprocessing/ukr_rus/1_rt_original.csv) but no working selectors
+    for it exist in this codebase, so it deliberately has no branch below.
+    """
     def __init__(self, website):
         self.website = website
         self.semaphore = asyncio.Semaphore(10)
@@ -42,21 +51,10 @@ class Russia:
             self.date_class = "article__info-date"
             self.max_pages = 2
 
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Connection": "keep-alive",
-            "Referer": self.base_url,
-            "Origin": self.base_url,
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-User": "?1",
-            "Sec-Fetch-Dest": "document",
-        }
+        self.headers = {**ScraperConfig.BROWSER_HEADERS_BASE, "Referer": self.base_url, "Origin": self.base_url}
 
         # CSV path and existing titles
-        self.csv_path = f"../../../data/russia/{self.website}_original.csv"
+        self.csv_path = PreprocessingConfig.STAGE_ORIGINAL.format(website=self.website)
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:
@@ -120,8 +118,9 @@ class Russia:
         await self.extract_text(session)
 
 
-async def main():
-    scraper = Russia(website="rt")
+async def main(website="ria"):
+    # "rt" is intentionally not a valid value here -- see the class docstring.
+    scraper = Russia(website=website)
     async with aiohttp.ClientSession() as session:
         await scraper.process_website(session)
 

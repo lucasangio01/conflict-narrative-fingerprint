@@ -4,25 +4,16 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.parse import urljoin
 import os
+from src.utils.constants import ScraperConfig, PreprocessingConfig
 
 
 class Ynet:
     def __init__(self):
         self.base_url = "https://www.ynet.co.il/news/category/194"
         self.semaphore = asyncio.Semaphore(3)
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Connection": "keep-alive",
-            "Referer": self.base_url,
-            "Origin": self.base_url,
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-User": "?1",
-            "Sec-Fetch-Dest": "document",}
-        
-        self.csv_path = "../../../data/pal_isr/ynet_original.csv"
+        self.headers = {**ScraperConfig.BROWSER_HEADERS_BASE, "Referer": self.base_url, "Origin": self.base_url}
+
+        self.csv_path = PreprocessingConfig.STAGE_ORIGINAL.format(website="ynet")
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:

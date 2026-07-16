@@ -2,19 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
-from src.utils.constants import Websites, AgencyConfig
-
-warnings.filterwarnings('ignore')
-
-plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["Times New Roman", "DejaVu Serif"],
-    "axes.labelsize": 14,
-    "xtick.labelsize": 12,
-    "ytick.labelsize": 12,
-    "pdf.fonttype": 42,
-    "ps.fonttype": 42,
-})
+from src.utils.constants import Websites, AgencyConfig, PlotConfig
 
 
 def plot_agency_bars(theater):
@@ -34,13 +22,12 @@ def plot_agency_bars(theater):
     outlet_labels  = {o: Websites.DISPLAY_NAMES.get(o, o) for o in outlets}
     outlet_colors  = cfg["outlet_colors"]
     labels_ordered = cfg["labels"]
-    csv_pattern    = cfg["agency_csv_pattern"]
 
     print(f"Generating grouped agency bar chart for theater: {theater}")
 
     frames = []
     for outlet in outlets:
-        path = csv_pattern.format(outlet=outlet)
+        path = AgencyConfig.AGENCY_CSV_PATTERN.format(website=outlet)
         df = pd.read_csv(path)
         summary = (
             df.groupby('Label')
@@ -112,6 +99,13 @@ def plot_agency_bars(theater):
 
 
 def main(theater="il_pa"):
+    warnings.filterwarnings('ignore')
+    plt.rcParams.update({
+        **PlotConfig.RCPARAMS_SERIF_BASE,
+        "axes.labelsize": 14,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+    })
     plot_agency_bars(theater=theater)
 
 

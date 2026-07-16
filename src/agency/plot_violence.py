@@ -2,25 +2,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
 import warnings
-from src.utils.constants import AgencyConfig
-
-warnings.filterwarnings('ignore')
-
-plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["Times New Roman", "DejaVu Serif"],
-    "axes.labelsize": 13,
-    "xtick.labelsize": 11,
-    "ytick.labelsize": 11,
-    "pdf.fonttype": 42,
-    "ps.fonttype": 42,
-})
+from src.utils.constants import AgencyConfig, PlotConfig
 
 
 def plot_agency_violence(website, agency_csv=None, agency_threshold=AgencyConfig.AGENCY_THRESHOLD, violence_threshold=AgencyConfig.VIOLENCE_THRESHOLD):
     """Generates an Agency Ratio × Violence Rate scatter plot for one outlet."""
     if agency_csv is None:
-        agency_csv = f"{website}_agency_actions.csv"
+        agency_csv = AgencyConfig.AGENCY_CSV_PATTERN.format(website=website)
 
     print(f"Generating Agency-Violence scatter for: {website}")
 
@@ -112,6 +100,13 @@ def plot_agency_violence(website, agency_csv=None, agency_threshold=AgencyConfig
 
 
 def main(website="alquds"):
+    warnings.filterwarnings('ignore')
+    plt.rcParams.update({
+        **PlotConfig.RCPARAMS_SERIF_BASE,
+        "axes.labelsize": 13,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+    })
     plot_agency_violence(
         website            = website,
         agency_threshold   = AgencyConfig.AGENCY_THRESHOLD,

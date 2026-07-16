@@ -4,7 +4,7 @@ from src.utils.constants import PreprocessingConfig
 
 
 def chunk_resolved_data(website_name, max_chars=PreprocessingConfig.MAX_CHUNK_CHARS):
-    input_file = f"3_{website_name}_resolved.csv"
+    input_file = PreprocessingConfig.STAGE_RESOLVED.format(website=website_name)
     df = pd.read_csv(input_file)
 
     rows = []
@@ -19,7 +19,7 @@ def chunk_resolved_data(website_name, max_chars=PreprocessingConfig.MAX_CHUNK_CH
         if stop_marker in text:
             text = text.split(stop_marker)[0]
 
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+        sentences = re.split(PreprocessingConfig.SENTENCE_SPLIT_REGEX, text.strip())
         current_chunk = ""
         for sent in sentences:
             if not sent.strip(): continue
@@ -34,7 +34,7 @@ def chunk_resolved_data(website_name, max_chars=PreprocessingConfig.MAX_CHUNK_CH
             rows.append({"title": title, "date": date, "text": current_chunk.strip()})
 
     chunked_df = pd.DataFrame(rows)
-    output_file = f"4_{website_name}_chunked.csv"
+    output_file = PreprocessingConfig.STAGE_CHUNKED.format(website=website_name)
     chunked_df.to_csv(output_file, index=False)
     print(f"✅ Created {len(chunked_df)} chunks. Saved to {output_file}")
     return chunked_df

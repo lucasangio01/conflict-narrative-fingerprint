@@ -55,7 +55,7 @@ def run_full_article_coref_lingmess(df, website_name, nlp):
             resolved_texts.append("")
             continue
 
-        sentences = re.split(r'(?<=[.!?])\s+', full_text)
+        sentences = re.split(PreprocessingConfig.SENTENCE_SPLIT_REGEX, full_text)
 
         sub_chunks = []
         current_chunk = []
@@ -90,7 +90,7 @@ def run_full_article_coref_lingmess(df, website_name, nlp):
             torch.cuda.empty_cache()
 
     df['resolved_text'] = resolved_texts
-    output_file = f"3_{website_name}_resolved.csv"
+    output_file = PreprocessingConfig.STAGE_RESOLVED.format(website=website_name)
     df.to_csv(output_file, index=False)
     print(f"\n✅ Mission Accomplished! Data saved to: {output_file}")
     return df
@@ -98,7 +98,7 @@ def run_full_article_coref_lingmess(df, website_name, nlp):
 
 def main(website="alquds"):
     try:
-        raw_df = pd.read_csv(f"2_{website}_english.csv", low_memory=False)
+        raw_df = pd.read_csv(PreprocessingConfig.STAGE_ENGLISH.format(website=website), low_memory=False)
         df_resolved = run_full_article_coref_lingmess(raw_df, website, get_nlp())
     except Exception as e:
         print(f"❌ Execution Error: {e}")

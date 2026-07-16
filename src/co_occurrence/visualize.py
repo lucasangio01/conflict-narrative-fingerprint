@@ -3,19 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import warnings
-from src.utils.constants import CoOccurrenceConfig
-
-warnings.filterwarnings('ignore')
-
-plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["Times New Roman", "DejaVu Serif"],
-    "axes.labelsize": 13,
-    "xtick.labelsize": 10,
-    "ytick.labelsize": 10,
-    "pdf.fonttype": 42,
-    "ps.fonttype": 42,
-})
+from src.utils.constants import CoOccurrenceConfig, PlotConfig
 
 
 def plot_cooccurrence_visuals(website, pairs_csv, labels_csv, highlight_pairs=None):
@@ -191,10 +179,17 @@ def plot_cooccurrence_visuals(website, pairs_csv, labels_csv, highlight_pairs=No
 
 
 def main(website="ynet_global"):
+    warnings.filterwarnings('ignore')
+    plt.rcParams.update({
+        **PlotConfig.RCPARAMS_SERIF_BASE,
+        "axes.labelsize": 13,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+    })
     plot_cooccurrence_visuals(
         website=website,
-        pairs_csv=f"{website}_cooccurrence_pairs.csv",
-        labels_csv=f"{website}_cooccurrence_labels.csv",
+        pairs_csv=CoOccurrenceConfig.PAIRS_CSV_PATTERN.format(website=website),
+        labels_csv=CoOccurrenceConfig.LABELS_CSV_PATTERN.format(website=website),
         highlight_pairs=CoOccurrenceConfig.highlight_pairs_by_website().get(website, []),
     )
 

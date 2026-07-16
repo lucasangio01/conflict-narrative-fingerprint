@@ -6,28 +6,25 @@ import numpy as np
 from matplotlib.lines import Line2D
 import matplotlib.patheffects as PathEffects
 import warnings
+from src.utils.constants import NetworksConfig, PlotConfig
 from src.networks.common import build_graph
-
-warnings.filterwarnings('ignore')
-
-plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["Times New Roman", "DejaVu Serif"],
-    "axes.titlesize": 16,
-    "axes.labelsize": 12,
-    "pdf.fonttype": 42,
-    "ps.fonttype": 42,
-})
 
 
 def main(website="rt"):
-    with open(f"{website}_network_meta.pkl", "rb") as f:
+    warnings.filterwarnings('ignore')
+    plt.rcParams.update({
+        **PlotConfig.RCPARAMS_SERIF_BASE,
+        "axes.titlesize": 16,
+        "axes.labelsize": 12,
+    })
+
+    with open(NetworksConfig.META_PKL_PATTERN.format(website=website), "rb") as f:
         meta = pickle.load(f)
         active_entities = meta["active_entities"]
         theater_name    = meta["theater_name"]
 
-    df_metrics = pd.read_csv(f"{website}_network_metrics.csv", index_col='entity')
-    df_edges   = pd.read_csv(f"{website}_edges.csv")
+    df_metrics = pd.read_csv(NetworksConfig.METRICS_CSV_PATTERN.format(website=website), index_col='entity')
+    df_edges   = pd.read_csv(NetworksConfig.EDGES_CSV_PATTERN.format(website=website))
 
     print(f"✅ Loaded data for {website} ({theater_name})")
 

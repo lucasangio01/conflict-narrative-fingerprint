@@ -5,13 +5,13 @@ from tqdm import tqdm
 from collections import Counter
 from itertools import combinations
 import warnings
-from src.utils.constants import NamesDicts, Websites, CoOccurrenceConfig, PretrainedModels
-
-warnings.filterwarnings('ignore')
+from src.utils.constants import NamesDicts, Websites, CoOccurrenceConfig, PretrainedModels, PreprocessingConfig
 
 
 def main(website="alquds"):
-    clean_data_file = f"{website}_final.csv"
+    warnings.filterwarnings('ignore')
+
+    clean_data_file = PreprocessingConfig.STAGE_FINAL.format(website=website)
 
     # en_core_web_lg ships with a dependency parser that handles sentence segmentation.
     # Sentencizer is NOT added here -- it would conflict with the parser and is redundant.
@@ -19,7 +19,7 @@ def main(website="alquds"):
 
     is_il_pa        = website in Websites.WEBSITES_PALESTINE_ISRAEL
     active_entities = NamesDicts.IZ_PA_BASE if is_il_pa else NamesDicts.RU_UK_BASE
-    theater_name    = "Israel-Palestine" if is_il_pa else "Russia-Ukraine"
+    theater_name    = Websites.THEATER_IL_PA if is_il_pa else Websites.THEATER_RU_UK
 
     # Sort by length descending so multi-word keys are matched before their substrings
     search_keys = sorted(list(set(list(NamesDicts.SYNONYM_MAP.keys()) + list(active_entities.keys()))), key=len, reverse=True)
@@ -144,14 +144,18 @@ def main(website="alquds"):
     print("(Use this list to expand NamesDicts.SYNONYM_MAP in src/utils/constants.py)\n")
     print(unrecognized[['Name', 'Freq']].head(20).to_string(index=False))
 
-    df_results.to_csv(f"{website}_cooccurrence_pairs.csv", index=False)
-    label_results.to_csv(f"{website}_cooccurrence_labels.csv", index=False)
-    audit_df.to_csv(f"{website}_audit_names.csv", index=False)
+    pairs_csv = CoOccurrenceConfig.PAIRS_CSV_PATTERN.format(website=website)
+    labels_csv = CoOccurrenceConfig.LABELS_CSV_PATTERN.format(website=website)
+    audit_csv = f"{website}_audit_names.csv"
+
+    df_results.to_csv(pairs_csv, index=False)
+    label_results.to_csv(labels_csv, index=False)
+    audit_df.to_csv(audit_csv, index=False)
 
     print(f"\n✅ Saved:")
-    print(f"   {website}_cooccurrence_pairs.csv   — full pair matrix with Jaccard + PMI")
-    print(f"   {website}_cooccurrence_labels.csv  — label-level aggregation")
-    print(f"   {website}_audit_names.csv          — full NER audit for dictionary expansion")
+    print(f"   {pairs_csv}   — full pair matrix with Jaccard + PMI")
+    print(f"   {labels_csv}  — label-level aggregation")
+    print(f"   {audit_csv}          — full NER audit for dictionary expansion")
 
     return df_results, label_results, audit_df
 

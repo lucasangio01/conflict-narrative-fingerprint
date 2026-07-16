@@ -4,13 +4,14 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.parse import urljoin
 import os
+from src.utils.constants import PreprocessingConfig
 
 
 class JPost:
     def __init__(self):
         self.base_url = "https://www.jpost.com/opinion"
         self.semaphore = asyncio.Semaphore(3)
-        self.csv_path = "../../../data/pal_isr/jpost_original.csv"
+        self.csv_path = PreprocessingConfig.STAGE_ORIGINAL.format(website="jpost")
         if os.path.exists(self.csv_path):
             self.df_text = pd.read_csv(self.csv_path)
             if "Unnamed: 0" in self.df_text.columns:

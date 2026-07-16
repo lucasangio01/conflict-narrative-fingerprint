@@ -1,12 +1,11 @@
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 import pandas as pd
-from src.utils.constants import Websites, PretrainedModels
+from src.utils.constants import Websites, PretrainedModels, PreprocessingConfig
 
 
 def create_embeddings(df_name):
-    df_input = f"4_{df_name}_chunked.csv"
-    df_output = f"5_{df_name}_embedded.csv"
+    df_input = PreprocessingConfig.STAGE_CHUNKED.format(website=df_name)
+    df_output = PreprocessingConfig.STAGE_EMBEDDED.format(website=df_name)
 
     df = pd.read_csv(df_input).dropna(subset=["text"])
     model = PretrainedModels.sentence_embedder()
